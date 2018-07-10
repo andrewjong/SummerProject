@@ -1,3 +1,4 @@
-a
-the
+some
 every
+no
+not every
