@@ -1,8 +1,23 @@
+import generate_data as gd
+import json
+
+def compose_relations(x,y):
+    return relation_composition[(x,y)]
+
+def strong_composition(signature1, signature2, relation1, relation2):
+    composition1 = compose_relations(signature1[relation1], signature2[relation2])
+    composition2 = compose_relations(signature2[relation2], signature1[relation1])
+    if composition1 == "independence":
+        return composition2
+    if composition2 != "independence" and composition1 != composition2:
+        print("This shouldn't happen", composition1, composition2)
+    return composition1
+
 relations = ["equivalence", "entails", "reverse entails", "contradiction", "cover", "alternation", "independence"]
 relations2 = ["equivalence", "entails", "reverse entails", "contradiction", "cover", "alternation", "independence"]
 relation_composition= dict()
 for r in relations:
-    for r in relations2:
+    for r2 in relations2:
         relation_composition[(r,r2)] = "independence"
 for r in relations:
     relation_composition[("equivalence", r)] = r
@@ -28,6 +43,7 @@ negation_signature = {"equivalence":"equivalence", "entails":"reverse entails", 
 emptystring_signature = {"equivalence":"equivalence", "entails":"entails", "reverse entails":"reverse entails", "contradiction":"contradiction", "cover":"cover", "alternation":"alternation", "independence":"independence"}
 compose_contradiction_signature = {r:relation_composition[(r, "contradiction")] for r in relations }
 determiner_signatures = dict()
+symmetric_relation = {"equivalence":"equivalence", "entails":"reverse entails", "reverse entails":"entails", "contradiction":"contradiction", "cover":"cover", "alternation":"alternation", "independence":"independence"}
 determiner_signatures[("some","some")] =(
 {"equivalence":"equivalence", "entails":"entails", "reverse entails":"reverse entails", "independence":"independence"},
 {"equivalence":"equivalence", "entails":"entails", "reverse entails":"reverse entails", "contradiction":"cover", "cover":"cover", "alternation":"independence", "independence":"independence"}
@@ -36,25 +52,34 @@ determiner_signatures[("every","every")] =(
 {"equivalence":"equivalence", "entails":"reverse entails", "reverse entails":"entails", "independence":"independence"},
 {"equivalence":"equivalence", "entails":"entails", "reverse entails":"reverse entails", "contradiction":"alternation", "cover":"independence", "alternation":"alternation", "independence":"independence"}
 )
-for key in [("some","some"), ("every","every")]:
+for key in determiner_signatures:
     signature1, signature2 = determiner_signatures[key]
     new_signature = dict()
     for key1 in signature1:
         for key2 in signature2:
-            new_siganture[(key1, key2)] = strong_composition(signature1, signature2, key1, key2)
+            new_signature[(key1, key2)] = strong_composition(signature1, signature2, key1, key2)
     determiner_signatures[key] = new_signature
 
-determiner_signatures[("every","some")] =(
-{"equivalence":"entails", "entails":"entails", "reverse entails":"independence", "independence":"independence"},
-{"equivalence":"entails", "entails":"entails", "reverse entails":"independence", "contradiction":"contradiction", "cover":"alternation", "alternation":"cover", "independence":"independence"}
-)
-determiner_signatures[("some","every")] =(
-{"equivalence":"reverse entails", "entails":"independence", "reverse entails":"reverse entails", "independence":"independence"},
-{"equivalence":"reverse entails", "entails":"independence", "reverse entails":"reverse entails", "contradiction":"contradiction", "cover":"alternation", "alternation":"cover", "independence":"independence"}
-)
+new_signature = dict()
+for relation1 in ["equivalence", "entails", "reverse entails", "independence"]:
+    for relation2 in relations:
+        if (relation2 == "equivalence" or relation2 == "reverse entails") and relation1 != "independence":
+            new_signature[(relation1, relation2)] = "reverse entails"
+        else:
+            new_signature[(relation1, relation2)] = "independence"
+determiner_signatures[("some","every")] = new_signature
+determiner_signatures[("some","every")][("entails", "contradiction")] = "alternation"
+determiner_signatures[("some","every")][("entails", "alternation")] = "alternation"
+determiner_signatures[("some","every")][("equivalence", "alternation")] = "alternation"
+determiner_signatures[("some","every")][("equivalence", "contradiction")] = "contradiction"
+determiner_signatures[("some","every")][("equivalence", "cover")] = "cover"
+determiner_signatures[("some","every")][("reverse entails", "cover")] = "cover"
+determiner_signatures[("some","every")][("contradiction", "cover")] = "cover"
 
-def compose_relations(x,y):
-    return relation_composition[(x,y)]
+new_signature = dict()
+for key in determiner_signatures[("some", "every")]:
+    new_signature[(symmetric_relation[key[0]], symmetric_relation[key[1]])] = symmetric_relation[determiner_signatures["some", "every"][key]]
+determiner_signatures[("every", "some")] = new_signature
 
 def compose_signatures(f,g):
     h = dict()
@@ -62,14 +87,6 @@ def compose_signatures(f,g):
         h[r] = g[f[r]]
     return h
 
-def strong_composition(signature1, signature2, relation1, relation2):
-    composition1 = compose_relations(signature1[relation1], signature2[relation2])
-    composition2 = compose_relations(signature2[relation2], signature1[relation1])
-    if composition1 == "independence":
-        return composition2
-    if composition2 != "independence" and composition1 != composition2:
-        print("This shouldn't happen", composition1, composition2)
-    return composition1
 
 def standard_lexical_merge(x,y):
     if  x == y:
@@ -90,8 +107,9 @@ def negation_merge(negation1, negation2):
         return negation_signature
     if not negation1:
         return compose_contradiction_signature
-    if negation2:
+    if negation1:
         return compose_signatures(negation_signature, compose_contradiction_signature)
+    print("oh fuck")
 
 def standard_phrase(relation1, relation2):
     if relation2 == "equivalence":
@@ -105,7 +123,13 @@ def determiner_phrase(signature, relation1, relation2):
 def negation_phrase(negation_signature, relation):
     return negation_signature[relation]
 
-
+def get_final_label(relation):
+    if relation in ["cover", "independence", "reverse entails"]:
+        return "permits"
+    if relation in ["entails", "equivalence"]:
+        return "entails"
+    if relation in ["alternation", "contradiction"]:
+        return "contradicts"
 
 def compute_label(premise, hypothesis):
     #leaves
@@ -135,4 +159,20 @@ def compute_label(premise, hypothesis):
     subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
 
     subject_NegDP_relation = negation_phrase(subject_negation_signature, object_DP_relation)
-    return subject_NegDP_relation
+    return get_final_label(subject_NegDP_relation)
+
+data, _, _ = gd.process_data(1.0)
+with open("simple_solutions2", 'r') as f:
+    solutions= json.loads(f.read())
+count = 0
+count2 = 0
+for encoding in solutions:
+    premise, hypothesis = gd.encoding_to_example(data, json.loads(encoding))
+    count += 1
+    if solutions[encoding] != compute_label(premise, hypothesis):
+        #print(solutions[encoding])
+        #print(compute_label(premise, hypothesis))
+        #print(premise.string)
+        #print(hypothesis.string)
+        count2 += 1
+print(count, count2)

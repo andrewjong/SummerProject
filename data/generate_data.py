@@ -33,7 +33,7 @@ class sentence:
             self.negation = "does not" #negation for active
             self.verb_index = 2#controls the verb form
         self.string = self.construct_string([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
-        self.construct_logical_form2()
+        self.construct_logical_form()
         self.initialize_natlog()
 
     def initialize_natlog(self):
@@ -93,8 +93,8 @@ class sentence:
         if self.subject_adjective != "":
             subject_logical_form =self.subject_adjective + subject_logical_form
         self.logical_form = self.add_quantifier(self.subject_determiner, subject_logical_form, logical_form, subject_noun_variable)
-        self.logical_form = "(" + self.logical_form + ")" + "& all y.(" + object_logical_form + "->" + self.object_noun + "(" + object_noun_variable + ")" + ")"
-        self.logical_form = self.logical_form + "& all x.(" + subject_logical_form + "->" + self.subject_noun + "(" + subject_noun_variable + ")" + ")" + "& all x.(all y.(" + self.adverb + self.verb[2] + verb_arg + "->" + self.verb[2] + verb_arg + "))"
+        self.logical_form = "(" + self.logical_form + ")"
+        self.assumptions= "exists x.(" + subject_logical_form + ") & exists y.(" + object_logical_form + ") & all y.(" + object_logical_form + "->" + self.object_noun + "(" + object_noun_variable + ")" + ")" + "& all x.(" + subject_logical_form + "->" + self.subject_noun + "(" + subject_noun_variable + ")" + ")" + "& all x.(all y.(" + self.adverb + self.verb[2] + verb_arg + "->" + self.verb[2] + verb_arg + "))"
 
     def construct_logical_form(self):
         logical_form = ""
@@ -114,6 +114,7 @@ class sentence:
         if self.subject_adjective != "":
             subject_logical_form ="(" + subject_logical_form +  "&" + self.subject_adjective + "(" + subject_noun_variable +  ")" + ")"
         self.logical_form = self.add_quantifier(self.subject_determiner, subject_logical_form, logical_form, subject_noun_variable)
+        self.assumptions = "exists x.(" + subject_logical_form + ") & exists y.(" + object_logical_form + ")"
 
     def add_quantifier(self, determiner, first_relation, second_realtion, variable):
         result = ""
@@ -155,16 +156,18 @@ def process_data(train_ratio):
 
 def get_label(prover, premise, hypothesis):
     #returns a label that is determined from using Prover9 on the first order logic representations
-    p = Expression.fromstring(premise.logical_form)
-    h = Expression.fromstring(hypothesis.logical_form)
-    noth = Expression.fromstring("-" + "(" + hypothesis.logical_form + ")")
-    if prover.prove(h, [p]):
+    premise_assumptions = Expression.fromstring(premise.assumptions)
+    hypothesis_assumptions = Expression.fromstring(hypothesis.assumptions)
+    premise_logical_form = Expression.fromstring(premise.logical_form)
+    hypothesis_logical_form = Expression.fromstring(hypothesis.logical_form)
+    negated_hypothesis_logical_form = Expression.fromstring("-" + "(" + hypothesis.logical_form + ")")
+    if prover.prove(hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
         return "entails"
-    if prover.prove(noth, [p]):
+    if prover.prove(negated_hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
         return "contradicts"
     return "permits"
 
-def build_simple_file():
+def build_simple_file(name):
     subject_noun = "man"
     subject_adjective1 = "tall"
     subject_adjective2 = "happy"
@@ -240,7 +243,7 @@ def build_simple_file():
                 for k in range(2):
                     if i != 1 or j != 1 or k != 1:
                         result[json.dumps(final_encoding + [i,j,k])] = "permits"
-    with open("simple_examples2" , "w") as f:
+    with open(name, "w") as f:
         f.write(json.dumps(result))
 
 
@@ -249,7 +252,7 @@ def parallel_labels(x):
     #print(x[0].string, x[0].logical_form, label, x[1].string, x[1].logical_form)
     return label
 
-def build_boolean_file():
+def build_boolean_file(name):
     logic_operators = ["|", "&", "->"]
     result = dict()
     for pindex in range(3):
@@ -279,7 +282,7 @@ def build_boolean_file():
                     else:
                         label = "permits"
                     result[json.dumps((pindex, hindex, first_relation, second_relation))] = label
-    with open("boolean_examples", "w") as f:
+    with open(name,"w") as f:
         f.write(json.dumps(result))
 
 
@@ -470,19 +473,36 @@ def parse_sentence(data, input_sentence):
 
 
 if __name__ == "__main__":
-    build_simple_file()
-    print(meme)
+    build_simple_file("simple_solutions")
     data, _, _ = process_data(1.0)
-    if False:
-        premise, hypothesis = encoding_to_example(data, [0,2,1,0,0,1,0,0,0,1,1,1])
+    with open("simple_solutions", 'r') as f:
+        solutions= json.loads(f.read())
+    with open("simple_solutions2", 'r') as f:
+        solutions2= json.loads(f.read())
+    count = 0
+    count2 = 0
+    for k in solutions:
+        count += 1
+        if solutions[k] != solutions2[k]:
+            print(solutions[k])
+            print(solutions2[k])
+            p, h = encoding_to_example(data, json.loads(k))
+            print(p.string)
+            print(h.string)
+            print(p.logical_form)
+            print(h.logical_form)
+            print(p.assumptions)
+            print(h.assumptions)
+            count2 += 1
+    print(count, count2)
+    if True:
+        premise, hypothesis = encoding_to_example(data, [0,0,1,0,2,1,0,0,0,1,1,1])
         print(premise.string)
         print(premise.logical_form)
+        print(premise.assumptions)
         print(hypothesis.string)
         print(hypothesis.logical_form)
         print(get_label(global_prover,premise, hypothesis))
-        print(meme)
     for x in generate_balanced_data("simple_examples", "boolean_examples", 10000, 0, data):
         if parse_sentence(data, x[0]).string != x[0]:
             print("fuck", parse_sentence(data, x[0]).string, x[0])
-        #print(x[0],"\n", x[1],"\n", x[2],"\n","\n",)
-    check_data(data)
