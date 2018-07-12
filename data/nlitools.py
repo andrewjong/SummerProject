@@ -74,7 +74,7 @@ determiner_signatures[("some","every")][("equivalence", "alternation")] = "alter
 determiner_signatures[("some","every")][("equivalence", "contradiction")] = "contradiction"
 determiner_signatures[("some","every")][("equivalence", "cover")] = "cover"
 determiner_signatures[("some","every")][("reverse entails", "cover")] = "cover"
-determiner_signatures[("some","every")][("contradiction", "cover")] = "cover"
+determiner_signatures[("some","every")][("reverse entails", "contradiction")] = "cover"
 
 new_signature = dict()
 for key in determiner_signatures[("some", "every")]:
@@ -157,8 +157,15 @@ def compute_label(premise, hypothesis):
     negverb_relation = negation_phrase(verb_negation_signature, object_negDP_relation)
 
     subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
+    #print(subject_DP_relation)
+    #print(premise.object_negation, hypothesis.object_negation)
+    #print(object_negation_signature)
+    #print(object_negDP_relation)
+    #print(subject_NP_relation)
+    #print(negverb_relation)
 
-    subject_NegDP_relation = negation_phrase(subject_negation_signature, object_DP_relation)
+    subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
+    #print(subject_NegDP_relation)
     return get_final_label(subject_NegDP_relation)
 
 data, _, _ = gd.process_data(1.0)
@@ -167,12 +174,16 @@ with open("simple_solutions2", 'r') as f:
 count = 0
 count2 = 0
 for encoding in solutions:
+    #print("start")
     premise, hypothesis = gd.encoding_to_example(data, json.loads(encoding))
     count += 1
     if solutions[encoding] != compute_label(premise, hypothesis):
-        #print(solutions[encoding])
-        #print(compute_label(premise, hypothesis))
-        #print(premise.string)
-        #print(hypothesis.string)
+        print(count)
+        print(solutions[encoding])
+        print(compute_label(premise, hypothesis))
+        print(premise.string)
+        print(hypothesis.string)
+        print(meme)
         count2 += 1
+    #print("\n \n")
 print(count, count2)

@@ -40,25 +40,25 @@ class sentence:
         if self.subject_determiner == "no":
             self.natlog_subject_determiner = "some"
             self.subject_negation = True
-        if self.subject_determiner in "not every":
+        if self.subject_determiner == "not every":
             self.natlog_subject_determiner = "every"
             self.subject_negation = True
-        if self.subject_determiner in "some":
+        if self.subject_determiner == "some":
             self.natlog_subject_determiner = "some"
             self.subject_negation = False
-        if self.subject_determiner in "not every":
+        if self.subject_determiner == "every":
             self.natlog_subject_determiner = "every"
             self.subject_negation = False
         if self.object_determiner == "no":
             self.natlog_object_determiner = "some"
             self.object_negation = True
-        if self.object_determiner in "not every":
+        if self.object_determiner == "not every":
             self.natlog_object_determiner = "every"
             self.object_negation = True
-        if self.object_determiner in "some":
+        if self.object_determiner == "some":
             self.natlog_object_determiner = "some"
             self.object_negation = False
-        if self.object_determiner in "not every":
+        if self.object_determiner == "every":
             self.natlog_object_determiner = "every"
             self.object_negation = False
         if self.negation == "":
