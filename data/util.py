@@ -193,6 +193,7 @@ def parse_simple_sentence(data, input_sentence):
         words = words[1:]
     else:
         adverb = ""
+    verb = ""
     for verb_list in data["transitive_verbs"]:
         if words[0] in verb_list:
             verb = verb_list
