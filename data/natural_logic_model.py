@@ -1,18 +1,18 @@
-import generate_data as gd
 import json
-
-def compose_relations(x,y):
-    return relation_composition[(x,y)]
+from util import sentence
 
 def strong_composition(signature1, signature2, relation1, relation2):
-    composition1 = compose_relations(signature1[relation1], signature2[relation2])
-    composition2 = compose_relations(signature2[relation2], signature1[relation1])
+    #returns the stronger relation of the first relation/signature composed
+    #with the second relation signature and vice sersa
+    composition1 = relation_composition[(signature1[relation1], signature2[relation2])]
+    composition2 = relation_composition[(signature2[relation2], signature1[relation1])]
     if composition1 == "independence":
         return composition2
     if composition2 != "independence" and composition1 != composition2:
         print("This shouldn't happen", composition1, composition2)
     return composition1
 
+#creates MacCartney's join operator
 relations = ["equivalence", "entails", "reverse entails", "contradiction", "cover", "alternation", "independence"]
 relations2 = ["equivalence", "entails", "reverse entails", "contradiction", "cover", "alternation", "independence"]
 relation_composition= dict()
@@ -39,9 +39,11 @@ relation_composition[("alternation", "cover")] = "entails"
 relation_composition[("cover", "entails")] = "cover"
 relation_composition[("cover", "contradiction")] = "reverse entails"
 relation_composition[("cover", "alternation")] = " reverse entails"
+#create the signatures for negation
 negation_signature = {"equivalence":"equivalence", "entails":"reverse entails", "reverse entails":"entails", "contradiction":"contradiction", "cover":"alternation", "alternation":"cover", "independence":"independence"}
 emptystring_signature = {"equivalence":"equivalence", "entails":"entails", "reverse entails":"reverse entails", "contradiction":"contradiction", "cover":"cover", "alternation":"alternation", "independence":"independence"}
 compose_contradiction_signature = {r:relation_composition[(r, "contradiction")] for r in relations }
+#creates the signatures for determiners
 determiner_signatures = dict()
 symmetric_relation = {"equivalence":"equivalence", "entails":"reverse entails", "reverse entails":"entails", "contradiction":"contradiction", "cover":"cover", "alternation":"alternation", "independence":"independence"}
 determiner_signatures[("some","some")] =(
@@ -81,14 +83,42 @@ for key in determiner_signatures[("some", "every")]:
     new_signature[(symmetric_relation[key[0]], symmetric_relation[key[1]])] = symmetric_relation[determiner_signatures["some", "every"][key]]
 determiner_signatures[("every", "some")] = new_signature
 
+#creates the signature for or
+and_signature = dict()
+for relation1 in relations:
+    for relation2 in relations2:
+        if relation2 in ["contradiction", "alternation"] or relation1 in ["contradiction", "alternation"]:
+            and_signature[(relation1,relation2)] = "alternation"
+        else:
+            and_signature[(relation1,relation2)] = "independence"
+and_signature[("equivalence", "equivalence")] = "equivalence"
+and_signature[("equivalence", "entails")] = "entails"
+and_signature[("equivalence", "reverse entails")] = "reverse entails"
+and_signature[("entails", "equivalence")] = "entails"
+and_signature[("entails", "entails")] = "entails"
+and_signature[("reverse entails", "equivalence")] = "reverse entails"
+and_signature[("reverse entails", "reverse entails")] = "reverse entails"
+
+or_signature = dict()
+for relation in relations:
+    for relation2 in relations2:
+        or_signature[(relation, relation2)] = negation_signature[and_signature[(negation_signature[relation], negation_signature[relation2])]]
+
+if_signature = dict()
+for relation in relations:
+    for relation2 in relations2:
+        if_signature[(relation, relation2)] = or_signature[(negation_signature[relation], relation2)]
+
 def compose_signatures(f,g):
+    #takes two signatures and returns a signature
+    #that is the result of applying the first and then the second
     h = dict()
     for r in f:
         h[r] = g[f[r]]
     return h
 
-
 def standard_lexical_merge(x,y):
+    #merges nouns, adjective, verbs, or adverbs
     if  x == y:
         return "equivalence"
     if x == "":
@@ -97,10 +127,14 @@ def standard_lexical_merge(x,y):
         return "entails"
     return "independence"
 
+
 def determiner_merge(determiner1,determiner2):
+    #merges determiners
     return determiner_signatures[(determiner1,determiner2)]
 
 def negation_merge(negation1, negation2):
+    #merges negation
+    relations = ["equivalence", "entails", "reverse entails", "contradiction", "cover", "alternation", "independence"]
     if negation1 == negation2 and not negation2:
         return emptystring_signature
     if negation1 == negation2 and negation2 :
@@ -109,21 +143,28 @@ def negation_merge(negation1, negation2):
         return compose_contradiction_signature
     if negation1:
         return compose_signatures(negation_signature, compose_contradiction_signature)
-    print("oh fuck")
 
 def standard_phrase(relation1, relation2):
+    #merges a noun relation with an adjective relation
+    #or a verb relation with an adverb relation
     if relation2 == "equivalence":
         return relation1
     return "independence"
 
 def determiner_phrase(signature, relation1, relation2):
+    #applies a determiner signature to two relation arguments
     return signature[(relation1,relation2)]
 
-
 def negation_phrase(negation_signature, relation):
+    #applies a negation signature to a relation argument
     return negation_signature[relation]
 
-def get_final_label(relation):
+def conjunction_phrase(conjunction_signature, relation1, relation2):
+    #applies a conjunction signature to two relation arguments
+    return conjunction_signature[(relation1, relation2)]
+
+def get_label(relation):
+    #converts MacCartney's relations to 3 class NLI labels
     if relation in ["cover", "independence", "reverse entails"]:
         return "permits"
     if relation in ["entails", "equivalence"]:
@@ -131,7 +172,8 @@ def get_final_label(relation):
     if relation in ["alternation", "contradiction"]:
         return "contradicts"
 
-def compute_label(premise, hypothesis):
+def compute_simple_relation(premise, hypothesis):
+    #computes the relation between a premise and hypothesis simple sentence
     #leaves
     subject_negation_signature = negation_merge(premise.subject_negation, hypothesis.subject_negation)
     subject_determiner_signature = determiner_merge(premise.natlog_subject_determiner, hypothesis.natlog_subject_determiner)
@@ -145,45 +187,56 @@ def compute_label(premise, hypothesis):
     object_noun_relation = standard_lexical_merge(premise.object_noun,hypothesis.object_noun)
     object_adjective_relation = standard_lexical_merge(premise.object_adjective,hypothesis.object_adjective)
 
-    #first layer nodes
+    #the nodes of the tree
     VP_relation = standard_phrase(adverb_relation, verb_relation)
     object_NP_relation = standard_phrase(object_adjective_relation, object_noun_relation)
     subject_NP_relation = standard_phrase(subject_adjective_relation, subject_noun_relation)
-
     object_DP_relation = determiner_phrase(object_determiner_signature, object_NP_relation, VP_relation)
-
     object_negDP_relation = negation_phrase(object_negation_signature, object_DP_relation)
-
     negverb_relation = negation_phrase(verb_negation_signature, object_negDP_relation)
-
     subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
-    #print(subject_DP_relation)
-    #print(premise.object_negation, hypothesis.object_negation)
-    #print(object_negation_signature)
-    #print(object_negDP_relation)
-    #print(subject_NP_relation)
-    #print(negverb_relation)
-
     subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
-    #print(subject_NegDP_relation)
-    return get_final_label(subject_NegDP_relation)
+    return subject_NegDP_relation
 
-data, _, _ = gd.process_data(1.0)
-with open("simple_solutions2", 'r') as f:
-    solutions= json.loads(f.read())
-count = 0
-count2 = 0
-for encoding in solutions:
-    #print("start")
-    premise, hypothesis = gd.encoding_to_example(data, json.loads(encoding))
-    count += 1
-    if solutions[encoding] != compute_label(premise, hypothesis):
-        print(count)
-        print(solutions[encoding])
-        print(compute_label(premise, hypothesis))
-        print(premise.string)
-        print(hypothesis.string)
-        print(meme)
-        count2 += 1
-    #print("\n \n")
-print(count, count2)
+def conjunction_to_negation(conjunction):
+    if conjunction == "or":
+        return False,False,False
+    if conjunction == "and":
+        return True,True,True
+    if conjunction == "then":
+        return True,False,False
+
+def compute_boolean_relation(premise_sentence1, premise_conjunction,premise_sentence2, hypothesis_sentence1, hypothesis_conjunction,hypothesis_sentence2):
+    #computes the relation between a premise and hypothesis compound sentence
+    premise_sentence1_negation, premise_conjunction_negation, premise_sentence2_negation= conjunction_to_negation(premise_conjunction)
+    hypothesis_sentence1_negation, hypothesis_conjunction_negation, hypothesis_sentence2_negation= conjunction_to_negation(hypothesis_conjunction)
+    sentence1_negation_signature = negation_merge(premise_sentence1_negation,hypothesis_sentence1_negation)
+    sentence1_relation = compute_simple_relation(premise_sentence1, hypothesis_sentence1)
+    sentence2_negation_signature = negation_merge(premise_sentence2_negation,hypothesis_sentence2_negation)
+    sentence2_relation = compute_simple_relation(premise_sentence2, hypothesis_sentence2)
+    sentence1_negation_relation = negation_phrase(sentence1_negation_signature, sentence1_relation)
+    sentence2_negation_relation = negation_phrase(sentence2_negation_signature, sentence2_relation)
+    conjunction_signature = or_signature
+    conjunction_relation = conjunction_phrase(conjunction_signature, sentence1_negation_relation, sentence2_negation_relation)
+    conjunction_negation_signature = negation_merge(premise_conjunction_negation, hypothesis_conjunction_negation)
+    conjunction_negation_relation = negation_phrase(conjunction_negation_signature, conjunction_relation)
+    return conjunction_negation_relation
+
+def test_simple():
+    x = dict()
+    for relation in relations:
+        x[relation] = set()
+    for VP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+        for object_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+            for subject_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+                for subject_negation_signature in [negation_merge(x, y) for x in [True, False] for y in [True, False]]:
+                    for object_negation_signature in [negation_merge(x, y) for x in [True, False] for y in [True, False]]:
+                        for verb_negation_signature in [negation_merge(x, y) for x in [True, False] for y in [True, False]]:
+                            for subject_determiner_signature in [determiner_merge(x, y) for x in ["every", "some"] for y in ["every", "some"]]:
+                                for object_determiner_signature in [determiner_merge(x, y) for x in ["every", "some"] for y in ["every", "some"]]:
+                                    object_DP_relation = determiner_phrase(object_determiner_signature, object_NP_relation, VP_relation)
+                                    object_negDP_relation = negation_phrase(object_negation_signature, object_DP_relation)
+                                    negverb_relation = negation_phrase(verb_negation_signature, object_negDP_relation)
+                                    subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
+                                    subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
+                                    x[object_DP_relation].add(get_label(subject_NegDP_relation))

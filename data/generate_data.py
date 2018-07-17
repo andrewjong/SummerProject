@@ -1,133 +1,8 @@
+from util import sentence
+import natural_logic_model as nlm
+import os
 import random
 import json
-import os
-import copy
-import pickle
-from nltk.sem.logic import *
-from nltk.inference import *
-from nltk import Prover9
-from nltk.corpus import wordnet
-from joblib import Parallel, delayed
-
-global_prover = Prover9()
-global_prover.config_prover9(r"C:\Program Files (x86)\Prover9-Mace4\bin-win32")
-
-class sentence:
-    #this class stores the logical representation of a sentence and the natural language representation of a sentence
-    def __init__(self, subject_noun, verb, object_noun, negate, adverb, subject_adjective, object_adjective, subject_determiner, object_determiner):
-        self.subject_noun = subject_noun
-        self.verb = verb
-        self.object_noun = object_noun
-        self.negate = negate
-        self.subject_determiner = subject_determiner
-        self.object_determiner = object_determiner
-        self.string_object_determiner = object_determiner
-        if negate and object_determiner == "no":
-            self.string_object_determiner = "any"
-        self.negation = ""
-        self.adverb = adverb
-        self.subject_adjective = subject_adjective
-        self.object_adjective = object_adjective
-        self.verb_index = 0
-        if negate:
-            self.negation = "does not" #negation for active
-            self.verb_index = 2#controls the verb form
-        self.string = self.construct_string([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
-        self.construct_logical_form()
-        self.initialize_natlog()
-
-    def initialize_natlog(self):
-        if self.subject_determiner == "no":
-            self.natlog_subject_determiner = "some"
-            self.subject_negation = True
-        if self.subject_determiner == "not every":
-            self.natlog_subject_determiner = "every"
-            self.subject_negation = True
-        if self.subject_determiner == "some":
-            self.natlog_subject_determiner = "some"
-            self.subject_negation = False
-        if self.subject_determiner == "every":
-            self.natlog_subject_determiner = "every"
-            self.subject_negation = False
-        if self.object_determiner == "no":
-            self.natlog_object_determiner = "some"
-            self.object_negation = True
-        if self.object_determiner == "not every":
-            self.natlog_object_determiner = "every"
-            self.object_negation = True
-        if self.object_determiner == "some":
-            self.natlog_object_determiner = "some"
-            self.object_negation = False
-        if self.object_determiner == "every":
-            self.natlog_object_determiner = "every"
-            self.object_negation = False
-        if self.negation == "":
-            self.verb_negation = False
-        else:
-            self.verb_negation = True
-
-    def construct_string(self,lst):
-        #turn a list of words into a single sentence string
-        result = ""
-        for word in lst:
-            if word != "":
-                result += word + " "
-        return result[:-1]
-
-    def construct_logical_form2(self):
-        #construct a first order logic representation
-        logical_form = ""
-        subject_noun_variable= "x"
-        object_noun_variable= "y"
-        verb_arg = "(" + subject_noun_variable + "," + object_noun_variable + ")"
-        logical_form = self.verb[2] + verb_arg
-        if self.adverb != "" :
-            logical_form = self.adverb + logical_form
-        object_logical_form = self.object_noun + "(" + object_noun_variable + ")"
-        if self.object_adjective != "":
-            object_logical_form = self.object_adjective + object_logical_form
-        logical_form = self.add_quantifier(self.object_determiner, object_logical_form, logical_form, object_noun_variable)
-        if self.negate:
-            logical_form = "-" + "(" + logical_form + ")"
-        subject_logical_form = self.subject_noun + "(" + subject_noun_variable + ")"
-        if self.subject_adjective != "":
-            subject_logical_form =self.subject_adjective + subject_logical_form
-        self.logical_form = self.add_quantifier(self.subject_determiner, subject_logical_form, logical_form, subject_noun_variable)
-        self.logical_form = "(" + self.logical_form + ")"
-        self.assumptions= "exists x.(" + subject_logical_form + ") & exists y.(" + object_logical_form + ") & all y.(" + object_logical_form + "->" + self.object_noun + "(" + object_noun_variable + ")" + ")" + "& all x.(" + subject_logical_form + "->" + self.subject_noun + "(" + subject_noun_variable + ")" + ")" + "& all x.(all y.(" + self.adverb + self.verb[2] + verb_arg + "->" + self.verb[2] + verb_arg + "))"
-
-    def construct_logical_form(self):
-        logical_form = ""
-        subject_noun_variable= "x"
-        object_noun_variable= "y"
-        verb_arg = "(" + subject_noun_variable + "," + object_noun_variable + ")"
-        logical_form = self.verb[2] + verb_arg
-        if self.adverb != "" :
-            logical_form ="(" +logical_form +  "&" + self.adverb + verb_arg + ")"
-        object_logical_form = self.object_noun + "(" + object_noun_variable + ")"
-        if self.object_adjective != "":
-            object_logical_form = "(" + object_logical_form + "&" + self.object_adjective + "(" + object_noun_variable + ")" + ")"
-        logical_form = self.add_quantifier(self.object_determiner, object_logical_form, logical_form, object_noun_variable)
-        if self.negate:
-            logical_form = "-" + "(" + logical_form + ")"
-        subject_logical_form = self.subject_noun + "(" + subject_noun_variable + ")"
-        if self.subject_adjective != "":
-            subject_logical_form ="(" + subject_logical_form +  "&" + self.subject_adjective + "(" + subject_noun_variable +  ")" + ")"
-        self.logical_form = self.add_quantifier(self.subject_determiner, subject_logical_form, logical_form, subject_noun_variable)
-        self.assumptions = "exists x.(" + subject_logical_form + ") & exists y.(" + object_logical_form + ")"
-
-    def add_quantifier(self, determiner, first_relation, second_realtion, variable):
-        result = ""
-        if determiner == "some" or determiner == "no":
-            result = "exists " + variable + " .(" + first_relation + "&" + second_realtion + ")"
-            if determiner == "no":
-                result = "-(" + result + ")"
-        if determiner == "every" or determiner == "not every":
-            result = "all " + variable + " .(" + first_relation + "->" + second_realtion + ")"
-            if determiner == "not every":
-                result = "-(" + result + ")"
-        return result
-
 
 def process_data(train_ratio):
     #split the different parts of speech into train, validation, and test
@@ -154,141 +29,8 @@ def process_data(train_ratio):
             test[c] = stuff
     return train, val, test
 
-def get_label(prover, premise, hypothesis):
-    #returns a label that is determined from using Prover9 on the first order logic representations
-    premise_assumptions = Expression.fromstring(premise.assumptions)
-    hypothesis_assumptions = Expression.fromstring(hypothesis.assumptions)
-    premise_logical_form = Expression.fromstring(premise.logical_form)
-    hypothesis_logical_form = Expression.fromstring(hypothesis.logical_form)
-    negated_hypothesis_logical_form = Expression.fromstring("-" + "(" + hypothesis.logical_form + ")")
-    if prover.prove(hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
-        return "entails"
-    if prover.prove(negated_hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
-        return "contradicts"
-    return "permits"
-
-def build_simple_file(name):
-    subject_noun = "man"
-    subject_adjective1 = "tall"
-    subject_adjective2 = "happy"
-    adverb1 = "happily"
-    adverb2 = "crazily"
-    verb = ["eats", "eaten", "eat"]
-    object_noun = "rock"
-    object_adjective1 = "big"
-    object_adjective2 = "rough"
-    dets = ["every", "not every", "some", "no"]
-    sentences = []
-    encodings = []
-    for pd1_index in range(4):
-        pd1 = dets[pd1_index]
-        for pd2_index in range(4):
-            pd2 = dets[pd2_index]
-            for hd1_index in range(4):
-                hd1 = dets[hd1_index]
-                for hd2_index in range(4):
-                    hd2 = dets[hd2_index]
-                    for subject_adjective_index in range(4):
-                        if subject_adjective_index == 0:
-                            padj1_word = subject_adjective1
-                            hadj1_word = padj1_word
-                        elif subject_adjective_index == 1:
-                            padj1_word = ""
-                            hadj1_word = subject_adjective2
-                        elif subject_adjective_index == 2:
-                            padj1_word = subject_adjective1
-                            hadj1_word = ""
-                        else:
-                            padj1_word = subject_adjective1
-                            hadj1_word = subject_adjective2
-                        for object_adjective_index in range(4):
-                            if object_adjective_index == 0:
-                                padj2_word = object_adjective1
-                                hadj2_word = padj2_word
-                            elif object_adjective_index == 1:
-                                padj2_word = ""
-                                hadj2_word = object_adjective2
-                            elif object_adjective_index == 2:
-                                padj2_word = object_adjective1
-                                hadj2_word = ""
-                            else:
-                                padj2_word = object_adjective1
-                                hadj2_word = object_adjective2
-                            for adverb_index in range(4):
-                                if adverb_index == 0:
-                                    padv_word = adverb1
-                                    hadv_word = padv_word
-                                elif adverb_index == 1:
-                                    padv_word = ""
-                                    hadv_word = adverb2
-                                elif adverb_index == 2:
-                                    padv_word = adverb1
-                                    hadv_word = ""
-                                else:
-                                    padv_word = adverb1
-                                    hadv_word = adverb2
-                                for pnegation_value in range(2):
-                                    for hnegation_value in range(2):
-                                        sentences.append(
-                                        [sentence(subject_noun, verb, object_noun, pnegation_value, padv_word, padj1_word, padj2_word, pd1,pd2),
-                                        sentence(subject_noun, verb, object_noun, hnegation_value, hadv_word, hadj1_word, hadj2_word, hd1,hd2 )])
-                                        encodings.append([pnegation_value, pd1_index,pd2_index, hnegation_value, hd1_index, hd2_index, subject_adjective_index, object_adjective_index, adverb_index])
-    labels = Parallel(n_jobs=-1,backend="multiprocessing")(map(delayed(parallel_labels), sentences))
-    result = dict()
-    for i in range(len(labels)):
-        final_encoding = encodings[i] + [1,1,1]
-        result[json.dumps(final_encoding)] = labels[i]
-        for i in range(2):
-            for j in range(2):
-                for k in range(2):
-                    if i != 1 or j != 1 or k != 1:
-                        result[json.dumps(final_encoding + [i,j,k])] = "permits"
-    with open(name, "w") as f:
-        f.write(json.dumps(result))
-
-
-def parallel_labels(x):
-    label = get_label(global_prover, x[0], x[1])
-    #print(x[0].string, x[0].logical_form, label, x[1].string, x[1].logical_form)
-    return label
-
-def build_boolean_file(name):
-    logic_operators = ["|", "&", "->"]
-    result = dict()
-    for pindex in range(3):
-        for hindex in range(3):
-            for first_relation in range(3):
-                for second_relation in range(3):
-                    first_predicate = "A"
-                    second_predicate = "B"
-                    first_assumption = "(" + first_predicate+"(constant)"+logic_operators[pindex] + second_predicate+"(constant)" + ")"
-                    first_predicate = "C"
-                    second_predicate = "D"
-                    conclusion = "(" + first_predicate+"(constant)"+logic_operators[hindex] + second_predicate+"(constant)" + ")"
-                    assumptions = [Expression.fromstring(first_assumption)]
-                    if first_relation == 0:
-                        assumptions.append(Expression.fromstring("A(constant)->C(constant)"))
-                    if first_relation == 1:
-                        assumptions.append(Expression.fromstring("-A(constant)|-C(constant)"))
-                    if second_relation == 0:
-                        assumptions.append(Expression.fromstring("B(constant)->D(constant)"))
-                    if second_relation == 1:
-                        assumptions.append(Expression.fromstring("-B(constant)|-D(constant)"))
-                    label = None
-                    if global_prover.prove(Expression.fromstring(conclusion), assumptions):
-                        label = "entails"
-                    elif global_prover.prove(Expression.fromstring("-"+conclusion), assumptions):
-                        label = "contradicts"
-                    else:
-                        label = "permits"
-                    result[json.dumps((pindex, hindex, first_relation, second_relation))] = label
-    with open(name,"w") as f:
-        f.write(json.dumps(result))
-
-
-
-
 def save_data(examples, name):
+    #saves data in the SNLI format
     data = []
     for example in examples:
         example_dict = dict()
@@ -297,16 +39,22 @@ def save_data(examples, name):
         example_dict["gold_label"] = example[1]
         example_dict["example_data"] = example[3]
         data.append(json.dumps(example_dict))
-    with open(name, 'wb') as f:
-        f.writelines(data)
+    with open(name, 'w') as f:
+        for datum in data:
+            f.write(datum + "\n")
 
 def restricted(restrictions, enc):
+    #This function determines whether an encoding of an NLI input
+    #is restricted according to restrictions
     for i in range(len(enc)):
         if restrictions[i] < enc[i]:
             return True
     return False
 
 def split_dict(filename, restrictions):
+    #This function takes in a dictionary generated by build_simple_file or
+    # build_boolean_file and divides the encoded NLI input keys by the label
+    #they are mapped to
     with open(filename, 'r') as f:
         solutions= json.loads(f.read())
     e = dict()
@@ -324,8 +72,13 @@ def split_dict(filename, restrictions):
     return e, c, p
 
 def compute_relation(lexicon, relation_index):
+    #This function takes in a lexicon list of words and a relation_index
+    #and outputs the same random word twice if relation_index is 0,
+    #the empty string and a random word if relation_index is 1,
+    #the a random word and the empty string if relation_index is 2,
+    #and two different random words if relation index is 3
     if relation_index == 0:
-        premise_word = random.choice(lexicon)
+        premise_word = random.choice(lexicon + [""])
         hypothesis_word = premise_word
     if relation_index == 1:
         premise_word = ""
@@ -339,13 +92,23 @@ def compute_relation(lexicon, relation_index):
     return premise_word, hypothesis_word
 
 def select_new(lexicon, old):
+    #returns an element of lexicon that is not old without changing lexicon
     index = lexicon.index(old)
     lexicon.remove(old)
     new = random.choice(lexicon)
     lexicon.insert(index, old)
     return new
 
+def encoding_to_independent_example(data, encoding, premise, hypothesis):
+    new_premise, new_hypothesis = encoding_to_example(data,encoding)
+    while nlm.compute_simple_relation(premise, new_premise) != "independence" or nlm.compute_simple_relation(premise, new_hypothesis) != "independence" or nlm.compute_simple_relation(hypothesis, new_hypothesis) != "independence" or nlm.compute_simple_relation(hypothesis, new_premise) != "independence":
+        new_premise, new_hypothesis = encoding_to_example(data,encoding)
+    return new_premise, new_hypothesis
+
+
 def encoding_to_example(data, encoding):
+    #takes in an encoding produced by build_simple_file
+    #and outputs two sentence objects corresponding to the encoding
     dets = ["every", "not every", "some", "no"]
     psubject_noun = random.choice(data["agents"])
     pverb = random.choice(data["transitive_verbs"])
@@ -365,6 +128,9 @@ def encoding_to_example(data, encoding):
     return sentence(psubject_noun, pverb, pobject_noun, encoding[0], padverb, psubject_adjective, pobject_adjective, dets[encoding[1]],dets[encoding[2]]), sentence(hsubject_noun, hverb, hobject_noun, encoding[3], hadverb, hsubject_adjective, hobject_adjective, dets[encoding[4]],dets[encoding[5]])
 
 def generate_balanced_boolean_data(boolkeys, ekeys, ckeys, pkeys, size, data):
+    #using encoded compound examples in boolkeys, and the encoded simple
+    #examples in ekeys, ckeys, and pkeys, this function outputs a list of length
+    #size with compound sentence examples
     result = []
     for i in range(size):
         encoding = json.loads(random.choice(boolkeys))
@@ -379,13 +145,13 @@ def generate_balanced_boolean_data(boolkeys, ekeys, ckeys, pkeys, size, data):
             premise1, hypothesis1 = encoding_to_example(data,simple1_encoding)
         if encoding[3] == 0:
             simple2_encoding = json.loads(random.choice(ekeys))
-            premise2, hypothesis2 = encoding_to_example(data, simple2_encoding)
+            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         if encoding[3] == 1:
             simple2_encoding = json.loads(random.choice(ckeys))
-            premise2, hypothesis2 = encoding_to_example(data, simple2_encoding)
+            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         if encoding[3] == 2:
             simple2_encoding = json.loads(random.choice(pkeys))
-            premise2, hypothesis2 = encoding_to_example(data, simple2_encoding)
+            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         conjunctions = ["or", "and", "then"]
         premise_conjunction = conjunctions[encoding[0]]
         hypothesis_conjunction = conjunctions[encoding[1]]
@@ -398,7 +164,31 @@ def generate_balanced_boolean_data(boolkeys, ekeys, ckeys, pkeys, size, data):
         result.append((premise_compound, "entails", hypothesis_compound, [simple1_encoding, simple2_encoding, encoding]))
     return result
 
+def trim_simple_encodings(data,ekeys, ckeys, pkeys):
+    #This function trims simple nli encodings for use in
+    #generating compound sentences see paper for why this is necessary
+    new_ekeys = []
+    new_ckeys = []
+    new_pkeys = []
+    for encoding in ekeys:
+        premise, hypothesis = encoding_to_example(data,json.loads(encoding))
+        if nlm.compute_simple_relation(premise, hypothesis) == "entails":
+            new_ekeys.append(encoding)
+    for encoding in ckeys:
+        premise, hypothesis = encoding_to_example(data,json.loads(encoding))
+        if nlm.compute_simple_relation(premise, hypothesis) == "alternation":
+            new_ckeys.append(encoding)
+    for encoding in pkeys:
+        premise, hypothesis = encoding_to_example(data,json.loads(encoding))
+        if nlm.compute_simple_relation(premise, hypothesis) == "independence":
+            new_pkeys.append(encoding)
+    return new_ekeys, new_ckeys, new_pkeys
+
 def generate_balanced_data(simple_filename, boolean_filename, simple_size, boolean_size, data, restrictions=[1000000]*19):
+    #Using simple_filename generated from build_simple_file and
+    #boolean_filename from build_boolean_file generates a list of NLI inpus
+    #with simple_size simple examples and boolean_size compound examples
+    #restrictions can be used to restrict the types of examples generated
     e,c,p = split_dict(simple_filename, restrictions)
     ekeys = list(e.keys())
     ckeys = list(c.keys())
@@ -422,87 +212,9 @@ def generate_balanced_data(simple_filename, boolean_filename, simple_size, boole
     bool_ekeys = list(bool_e.keys())
     bool_ckeys = list(bool_c.keys())
     bool_pkeys = list(bool_p.keys())
-    examples += generate_balanced_boolean_data(bool_ekeys, ekeys, ckeys, pkeys, bool_label_size, data)
+    ekeys, ckeys, pkeys = trim_simple_encodings(data, ekeys, ckeys, pkeys)
+    examples += generate_balanced_boolean_data(bool_ekeys,ekeys, ckeys, pkeys, bool_label_size, data)
     examples += generate_balanced_boolean_data(bool_ckeys, ekeys, ckeys, pkeys, bool_label_size, data)
     examples += generate_balanced_boolean_data(bool_pkeys, ekeys, ckeys, pkeys, bool_label_size, data)
     random.shuffle(examples)
     return examples
-
-def parse_sentence(data, input_sentence):
-    words = input_sentence.split()
-    if words[0] == "not":
-        subject_determiner = "not every"
-        words = words[2:]
-    else:
-        subject_determiner = words[0]
-        words = words[1:]
-    if words[0] in data["subject_adjectives"]:
-        subject_adjective = words[0]
-        words = words[1:]
-    else:
-        subject_adjective = ""
-    subject_noun = words[0]
-    words = words[1:]
-    if words[0] == "does":
-        negation = True
-        words = words[2:]
-    else:
-        negation = False
-    if words[0] in data["adverbs"]:
-        adverb = words[0]
-        words = words[1:]
-    else:
-        adverb = ""
-    for verb_list in data["transitive_verbs"]:
-        if words[0] in verb_list:
-            verb = verb_list
-    words = words[1:]
-    if words[0] == "not":
-        object_determiner = "not every"
-        words = words[2:]
-    else:
-        object_determiner = words[0]
-        words = words[1:]
-    if words[0] in data["object_adjectives"]:
-        object_adjective = words[0]
-        words = words[1:]
-    else:
-        object_adjective = ""
-    object_noun = words[0]
-    return sentence(subject_noun, verb, object_noun, negation, adverb, subject_adjective, object_adjective, subject_determiner, object_determiner)
-
-
-if __name__ == "__main__":
-    build_simple_file("simple_solutions")
-    data, _, _ = process_data(1.0)
-    with open("simple_solutions", 'r') as f:
-        solutions= json.loads(f.read())
-    with open("simple_solutions2", 'r') as f:
-        solutions2= json.loads(f.read())
-    count = 0
-    count2 = 0
-    for k in solutions:
-        count += 1
-        if solutions[k] != solutions2[k]:
-            print(solutions[k])
-            print(solutions2[k])
-            p, h = encoding_to_example(data, json.loads(k))
-            print(p.string)
-            print(h.string)
-            print(p.logical_form)
-            print(h.logical_form)
-            print(p.assumptions)
-            print(h.assumptions)
-            count2 += 1
-    print(count, count2)
-    if True:
-        premise, hypothesis = encoding_to_example(data, [0,0,1,0,2,1,0,0,0,1,1,1])
-        print(premise.string)
-        print(premise.logical_form)
-        print(premise.assumptions)
-        print(hypothesis.string)
-        print(hypothesis.logical_form)
-        print(get_label(global_prover,premise, hypothesis))
-    for x in generate_balanced_data("simple_examples", "boolean_examples", 10000, 0, data):
-        if parse_sentence(data, x[0]).string != x[0]:
-            print("fuck", parse_sentence(data, x[0]).string, x[0])
