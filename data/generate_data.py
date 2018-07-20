@@ -3,6 +3,8 @@ import natural_logic_model as nlm
 import os
 import random
 import json
+import numpy as np
+from functools import reduce
 
 def process_data(train_ratio):
     #split the different parts of speech into train, validation, and test
@@ -37,7 +39,6 @@ def save_data(examples, name):
         example_dict["sentence1"] = example[0]
         example_dict["sentence2"] = example[2]
         example_dict["gold_label"] = example[1]
-        example_dict["example_data"] = example[3]
         data.append(json.dumps(example_dict))
     with open(name, 'w') as f:
         for datum in data:
@@ -127,30 +128,116 @@ def encoding_to_example(data, encoding):
     psubject_adjective, hsubject_adjective = compute_relation(data["subject_adjectives"], encoding[-6])
     return sentence(psubject_noun, pverb, pobject_noun, encoding[0], padverb, psubject_adjective, pobject_adjective, dets[encoding[1]],dets[encoding[2]]), sentence(hsubject_noun, hverb, hobject_noun, encoding[3], hadverb, hsubject_adjective, hobject_adjective, dets[encoding[4]],dets[encoding[5]])
 
-def generate_balanced_boolean_data(boolkeys, ekeys, ckeys, pkeys, size, data):
+def example_to_encoding(premise, hypothesis):
+    encoding = []
+    dets = ["every", "not every", "some", "no"]
+    if premise.negation == "does not":
+        encoding.append(1)
+    else:
+        encoding.append(0)
+    encoding += [dets.index(premise.subject_determiner),dets.index(premise.object_determiner)]
+    if hypothesis.negation == "does not":
+        encoding.append(1)
+    else:
+        encoding.append(0)
+    encoding += [dets.index(hypothesis.subject_determiner),dets.index(hypothesis.object_determiner)]
+    if premise.subject_adjective == hypothesis.subject_adjective:
+        encoding.append(0)
+    elif premise.subject_adjective == "":
+        encoding.append(1)
+    elif hypothesis.subject_adjective == "":
+        encoding.append(2)
+    else:
+        encoding.append(3)
+    if premise.object_adjective == hypothesis.object_adjective:
+        encoding.append(0)
+    elif premise.object_adjective == "":
+        encoding.append(1)
+    elif hypothesis.object_adjective == "":
+        encoding.append(2)
+    else:
+        encoding.append(3)
+    if premise.adverb == hypothesis.adverb:
+        encoding.append(0)
+    elif premise.adverb == "":
+        encoding.append(1)
+    elif hypothesis.adverb == "":
+        encoding.append(2)
+    else:
+        encoding.append(3)
+    if premise.subject_noun == hypothesis.subject_noun:
+        encoding.append(1)
+    else:
+        encoding.append(0)
+    if premise.verb == hypothesis.verb:
+        encoding.append(1)
+    else:
+        encoding.append(0)
+    if premise.object_noun == hypothesis.object_noun:
+        encoding.append(1)
+    else:
+        encoding.append(0)
+    return encoding
+
+def gcd(a, b):
+    if not b:
+        return a
+    else:
+        return gcd(b, a % b)
+
+def gcd_n(numbers):
+    return reduce(lambda x, y: gcd(x, y), numbers)
+
+def get_boolean_encoding_counts(bool_keys, ecounts, ccounts, pcounts):
+    counts = []
+    for encoding in bool_keys:
+        encoding = json.loads(encoding)
+        if encoding[2] == 0:
+            first_simple = sum(ecounts)
+        if encoding[2] == 1:
+            first_simple = sum(ccounts)
+        if encoding[2] == 2:
+            first_simple = sum(pcounts)
+        if encoding[3] == 0:
+            second_simple = sum(ecounts)
+        if encoding[3] == 1:
+            second_simple = sum(ccounts)
+        if encoding[3] == 2:
+            second_simple = sum(pcounts)
+        counts.append(first_simple * second_simple)
+    gcd = gcd_n(counts)
+    counts = [count/gcd for count in counts]
+    return counts
+
+
+def generate_balanced_boolean_data(bool_keys, label, ekeys, ckeys, pkeys,ecounts, ccounts, pcounts, sampling,size, data):
     #using encoded compound examples in boolkeys, and the encoded simple
     #examples in ekeys, ckeys, and pkeys, this function outputs a list of length
     #size with compound sentence examples
     result = []
+    if sampling == "level 0":
+        bool_counts = get_boolean_encoding_counts(bool_keys, ecounts, ccounts, pcounts)
+    elif sampling == "level 1":
+        bool_counts = [1] * len(bool_keys)
     for i in range(size):
-        encoding = json.loads(random.choice(boolkeys))
+        encoding = json.loads(weighted_selection(bool_keys, bool_counts))
         if encoding[2] == 0:
-            simple1_encoding = json.loads(random.choice(ekeys))
+            simple1_encoding = json.loads(weighted_selection(ekeys, ecounts))
             premise1, hypothesis1 = encoding_to_example(data, simple1_encoding)
         if encoding[2] == 1:
-            simple1_encoding = json.loads(random.choice(ckeys))
+            simple1_encoding = json.loads(weighted_selection(ckeys, ccounts))
             premise1, hypothesis1 = encoding_to_example(data, simple1_encoding)
         if encoding[2] == 2:
-            simple1_encoding = json.loads(random.choice(pkeys))
+            simple1_encoding = json.loads(weighted_selection(pkeys, pcounts))
             premise1, hypothesis1 = encoding_to_example(data,simple1_encoding)
         if encoding[3] == 0:
-            simple2_encoding = json.loads(random.choice(ekeys))
+            simple2_encoding = json.loads(weighted_selection(ekeys, ecounts))
             premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         if encoding[3] == 1:
-            simple2_encoding = json.loads(random.choice(ckeys))
+            simple2_encoding = json.loads(weighted_selection(ckeys, ccounts))
             premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         if encoding[3] == 2:
-            simple2_encoding = json.loads(random.choice(pkeys))
+            simple2_encoding = json.loads(weighted_selection(pkeys, pcounts))
             premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         conjunctions = ["or", "and", "then"]
         premise_conjunction = conjunctions[encoding[0]]
@@ -161,30 +248,106 @@ def generate_balanced_boolean_data(boolkeys, ekeys, ckeys, pkeys, size, data):
             premise_compound = "if " + premise_compound
         if hypothesis_conjunction == "then":
             hypothesis_compound = "if " + hypothesis_compound
-        result.append((premise_compound, "entails", hypothesis_compound, [simple1_encoding, simple2_encoding, encoding]))
+        result.append((premise_compound, label, hypothesis_compound))
     return result
 
-def trim_simple_encodings(data,ekeys, ckeys, pkeys):
+def trim_simple_encodings(data,simple_ratio, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts):
     #This function trims simple nli encodings for use in
     #generating compound sentences see paper for why this is necessary
     new_ekeys = []
     new_ckeys = []
     new_pkeys = []
-    for encoding in ekeys:
+    new_ecounts= []
+    new_ccounts = []
+    new_pcounts = []
+    for encoding, count in zip(ekeys, ecounts):
         premise, hypothesis = encoding_to_example(data,json.loads(encoding))
-        if nlm.compute_simple_relation(premise, hypothesis) == "entails":
+        if nlm.compute_simple_relation(premise, hypothesis) == "entails" and random.uniform(0,1) < simple_ratio:
             new_ekeys.append(encoding)
-    for encoding in ckeys:
+            new_ecounts.append(int(count))
+    for encoding, count in zip(ckeys, ccounts):
         premise, hypothesis = encoding_to_example(data,json.loads(encoding))
-        if nlm.compute_simple_relation(premise, hypothesis) == "alternation":
+        if nlm.compute_simple_relation(premise, hypothesis) == "alternation" and random.uniform(0,1) < simple_ratio:
             new_ckeys.append(encoding)
-    for encoding in pkeys:
+            new_ccounts.append(int(count))
+    for encoding, count in zip(pkeys, pcounts):
         premise, hypothesis = encoding_to_example(data,json.loads(encoding))
-        if nlm.compute_simple_relation(premise, hypothesis) == "independence":
+        if nlm.compute_simple_relation(premise, hypothesis) == "independence" and random.uniform(0,1) < simple_ratio:
             new_pkeys.append(encoding)
-    return new_ekeys, new_ckeys, new_pkeys
+            new_pcounts.append(int(count))
+    return new_ekeys, new_ckeys, new_pkeys, new_ecounts, new_ccounts, new_pcounts
 
-def generate_balanced_data(simple_filename, boolean_filename, simple_size, boolean_size, data, restrictions=[1000000]*19):
+
+def example_count(data, encoding):
+    count = 0
+    noun_object_size = len(data["things"])
+    verb_size = len(data["transitive_verbs"])
+    noun_subject_size = len(data["agents"])
+    subject_adjective_size = len(data["subject_adjectives"])
+    object_adjective_size = len(data["object_adjectives"])
+    adverb_size = len(data["adverbs"])
+    if encoding[-1] == 1:
+        count += noun_object_size
+    else:
+        count += noun_object_size * noun_object_size - noun_object_size
+    if encoding[-2] == 1:
+        count += verb_size
+    else:
+        count += verb_size * verb_size - verb_size
+    if encoding[-3] == 1:
+        count += noun_subject_size
+    else:
+        count += noun_subject_size * noun_subject_size - noun_subject_size
+    if encoding[-4] == 0:
+        count += adverb_size + 1
+    elif encoding[-4] == 1 or encoding[-4] == 2:
+        count += adverb_size
+    else:
+        count += (adverb_size + 1)^2 - 3* adverb_size - 1
+    if encoding[-5] == 0:
+        count += object_adjective_size + 1
+    elif encoding[-5] == 1 or encoding[-5] == 2:
+        count += object_adjective_size
+    else:
+        count += (object_adjective_size + 1)^2 - 3* object_adjective_size - 1
+    if encoding[-6] == 0:
+        count += subject_adjective_size + 1
+    elif encoding[-6] == 1 or encoding[-6] == 2:
+        count += subject_adjective_size
+    else:
+        count += (subject_adjective_size + 1)^2 - 3* subject_adjective_size - 1
+    return count
+
+def get_simple_encoding_counts(data, ekeys, ckeys, pkeys):
+    ecounts = []
+    ccounts = []
+    pcounts = []
+    for encoding in ekeys:
+        encoding = json.loads(encoding)
+        ecounts.append(example_count(data,encoding))
+    for encoding in ckeys:
+        encoding = json.loads(encoding)
+        ccounts.append(example_count(data,encoding))
+    for encoding in pkeys:
+        encoding = json.loads(encoding)
+        pcounts.append(example_count(data,encoding))
+    gcd = gcd_n(ecounts)
+    ecounts = [ecount/gcd for ecount in ecounts]
+    gcd = gcd_n(ccounts)
+    ccounts = [ccount/gcd for ccount in ccounts]
+    gcd = gcd_n(pcounts)
+    pcounts = [pcount/gcd for pcount in pcounts]
+    return ecounts, ccounts, pcounts
+
+def weighted_selection(keys, counts):
+    total = sum(counts)
+    x = random.uniform(1,total)
+    for key, count in zip(keys, counts):
+        x -= count
+        if x <= 0:
+            return key
+
+def generate_balanced_data(simple_filename, boolean_filename, simple_size, boolean_size, data, simple_sampling = "level 0", boolean_sampling = "level 0",keys_and_counts = None, restrictions=[1000000]*19):
     #Using simple_filename generated from build_simple_file and
     #boolean_filename from build_boolean_file generates a list of NLI inpus
     #with simple_size simple examples and boolean_size compound examples
@@ -193,28 +356,37 @@ def generate_balanced_data(simple_filename, boolean_filename, simple_size, boole
     ekeys = list(e.keys())
     ckeys = list(c.keys())
     pkeys = list(p.keys())
+    if simple_sampling == "level 0":
+        ecounts, ccounts, pcounts = get_simple_encoding_counts(data, ekeys, ckeys, pkeys)
+    if simple_sampling == "level 1":
+        ecounts = [1] * len(ekeys)
+        ccounts = [1] * len(ckeys)
+        pcounts = [1] * len(pkeys)
     label_size = int(simple_size/3)
     examples = []
     for i in range(label_size):
-        encoding = json.loads(random.choice(ekeys))
+        encoding = json.loads(weighted_selection(ekeys, ecounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "entails", hypothesis.string, [encoding]))
+        examples.append((premise.string, "entails", hypothesis.string))
     for i in range(label_size):
-        encoding = json.loads(random.choice(ckeys))
+        encoding = json.loads(weighted_selection(ckeys, ccounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "contradicts", hypothesis.string, [encoding]))
+        examples.append((premise.string, "contradicts", hypothesis.string))
     for i in range(label_size):
-        encoding = json.loads(random.choice(pkeys))
+        encoding = json.loads(weighted_selection(pkeys, pcounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "permits", hypothesis.string, [encoding]))
+        examples.append((premise.string, "permits", hypothesis.string))
     bool_label_size = int(boolean_size/3)
     bool_e,bool_c,bool_p = split_dict(boolean_filename, [100000]*19)
     bool_ekeys = list(bool_e.keys())
     bool_ckeys = list(bool_c.keys())
     bool_pkeys = list(bool_p.keys())
-    ekeys, ckeys, pkeys = trim_simple_encodings(data, ekeys, ckeys, pkeys)
-    examples += generate_balanced_boolean_data(bool_ekeys,ekeys, ckeys, pkeys, bool_label_size, data)
-    examples += generate_balanced_boolean_data(bool_ckeys, ekeys, ckeys, pkeys, bool_label_size, data)
-    examples += generate_balanced_boolean_data(bool_pkeys, ekeys, ckeys, pkeys, bool_label_size, data)
+    if keys_and_counts == None:
+        ekeys, ckeys, pkeys, ecounts, ccounts, pcounts = trim_simple_encodings(data,1, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts)
+    else:
+        ekeys, ckeys, pkeys, ecounts, ccounts, pcounts = keys_and_counts
+    examples += generate_balanced_boolean_data(bool_ekeys, "entails", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
+    examples += generate_balanced_boolean_data(bool_ckeys, "contradicts", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
+    examples += generate_balanced_boolean_data(bool_pkeys, "permits", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
     random.shuffle(examples)
     return examples
