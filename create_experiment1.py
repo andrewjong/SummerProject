@@ -6,8 +6,8 @@ if __name__ == '__main__':
     test_size = 10000
     data, _, _ = gd.process_data(1.0)
     examples = gd.generate_balanced_data("simple_solutions", "boolean_solutions", train_size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
-    gd.save_data(examples, "experiment1_level0.train")
+    gd.save_data(examples, "experiment1_level2.train")
     examples = gd.generate_balanced_data("simple_solutions", "boolean_solutions", val_size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
-    gd.save_data(examples, "experiment1_level0.val")
+    gd.save_data(examples, "experiment1_level2.val")
     examples = gd.generate_balanced_data("simple_solutions", "boolean_solutions", test_size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
-    gd.save_data(examples, "experiment1_level0.test")
+    gd.save_data(examples, "experiment1_level2.test")
