@@ -3,7 +3,7 @@ from nltk.sem.logic import *
 from nltk.inference import *
 from nltk import Prover9
 from joblib import Parallel, delayed
-from util import sentence
+from data_util import sentence
 
 prover = Prover9()
 prover.config_prover9(r"C:\Program Files (x86)\Prover9-Mace4\bin-win32")
@@ -115,8 +115,8 @@ def build_boolean_file(name):
     result = dict()
     for pindex in range(3):
         for hindex in range(3):
-            for first_relation in range(3):
-                for second_relation in range(3):
+            for first_relation in range(7):
+                for second_relation in range(7):
                     first_predicate = "A"
                     second_predicate = "B"
                     first_assumption = "(" + first_predicate+"(constant)"+logic_operators[pindex] + second_predicate+"(constant)" + ")"
@@ -124,14 +124,22 @@ def build_boolean_file(name):
                     second_predicate = "D"
                     conclusion = "(" + first_predicate+"(constant)"+logic_operators[hindex] + second_predicate+"(constant)" + ")"
                     assumptions = [Expression.fromstring(first_assumption)]
-                    if first_relation == 0:
+                    if first_relation == 1 or first_relation == 0:
                         assumptions.append(Expression.fromstring("A(constant)->C(constant)"))
-                    if first_relation == 1:
+                    if first_relation == 2 or first_relation == 0:
+                        assumptions.append(Expression.fromstring("C(constant)->A(constant)"))
+                    if first_relation == 3 or first_relation == 4:
                         assumptions.append(Expression.fromstring("-A(constant)|-C(constant)"))
-                    if second_relation == 0:
+                    if first_relation == 4 or first_relation == 5:
+                        assumptions.append(Expression.fromstring("A(constant)|C(constant)"))
+                    if second_relation == 1 or second_relation == 0:
                         assumptions.append(Expression.fromstring("B(constant)->D(constant)"))
-                    if second_relation == 1:
+                    if second_relation == 2 or second_relation == 0:
+                        assumptions.append(Expression.fromstring("D(constant)->B(constant)"))
+                    if second_relation == 3 or second_relation == 4:
                         assumptions.append(Expression.fromstring("-B(constant)|-D(constant)"))
+                    if second_relation == 4 or second_relation == 5:
+                        assumptions.append(Expression.fromstring("B(constant)|D(constant)"))
                     label = None
                     if prover.prove(Expression.fromstring(conclusion), assumptions):
                         label = "entails"

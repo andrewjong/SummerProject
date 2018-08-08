@@ -21,22 +21,20 @@ class PIModel(object):
         self.label_placeholder = tf.placeholder(tf.int32, shape=(None,))
         self.dropout_placeholder = tf.placeholder(tf.float32, shape=())
         self.l2_placeholder = tf.placeholder(tf.float32, shape = ())
-        self.learning_rate_placeholder = tf.placeholder(tf.float32, shape=(1,))
-        self.weights_placeholder = tf.placeholder(tf.int32, shape=(None,))
+        self.learning_rate_placeholder = tf.placeholder(tf.float32, shape=())
 
-    def create_feed_dict(self, prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2 = None, learning_rate = None, label_batch=None, weights = None):
+    def create_feed_dict(self, prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2 = None, learning_rate = None, label_batch=None):
         feed_dict = {
             self.prem_placeholder: prem_batch,
             self.prem_len_placeholder: prem_len,
             self.hyp_placeholder: hyp_batch,
             self.hyp_len_placeholder: hyp_len,
-            self.dropout_placeholder: dropout,
-            self.l2_placeholder: l2
+            self.dropout_placeholder: dropout
         }
+        if l2 is not None:
+            feed_dict[self.l2_placeholder] = l2
         if label_batch is not None:
             feed_dict[self.label_placeholder] = label_batch
-        if weights is not None:
-            feed_dict[self.weights_placeholder] = weights
         if learning_rate is not None:
             feed_dict[self.learning_rate_placeholder] = learning_rate
         else:
@@ -56,23 +54,35 @@ class PIModel(object):
                           sequence_length=self.prem_len_placeholder, dtype=tf.float32)
         with tf.variable_scope("hyp"):
             hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
-            _, outputs = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
+            _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                          sequence_length=self.hyp_len_placeholder, initial_state=prem_out)
-        h = outputs
+        h = hyp_out
         if self.config.attention:
             Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
             Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             w =  tf.Variable(initer([1,1,self.config.state_size]))
-            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(outputs, Wh), 1))
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(hyp_out, Wh), 1))
             alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
             r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
             Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(outputs, Wx))
+            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
 
         Ws = tf.Variable(initer([self.config.state_size,3]))
         bs = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws) + bs
+
+    def combine(self,stuff, reuse=True):
+        xavier = tf.contrib.layers.xavier_initializer()
+        return tf.layers.dense(
+                                tf.concat(stuff, 1),
+                                self.config.state_size,
+                                activation=tf.nn.relu,
+                                kernel_initializer=xavier,
+                                use_bias=True,
+                                name="meme",
+                                reuse=reuse
+                                )
 
     def add_prediction_op(self):
         print("MODEL TYPE:", self.model_type)
@@ -103,8 +113,15 @@ class PIModel(object):
                                             kernel_initializer=xavier,
                                             use_bias=True,
                                             )
+            representation2 = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=tf.nn.relu,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            )
 
-            self.logits = tf.layers.dense(representation, 3,
+            self.logits = tf.layers.dense(representation2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
@@ -128,6 +145,29 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
+        if self.model_type == "comp":
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])], reuse=False)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])])
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])])
+            neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])])
+            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])])
+            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])])
+            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])])
+            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])])
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])])
+            subjectNP = self.combine([subjecta, subjectn])
+            objectNP = self.combine([objecta, objectn])
+            VP = self.combine([adverb, verb])
+            objectDP1 = self.combine([objectd, objectNP])
+            objectDP2 = self.combine([objectDP1, VP])
+            negobjectDP = self.combine([neg, objectDP2])
+            final = self.combine([subjectd, subjectNP,])
+            final2 = self.combine([final, negobjectDP])
+            self.logits = tf.layers.dense(final2, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+
+
 
 
     def add_loss_op(self):
@@ -135,50 +175,25 @@ class PIModel(object):
         reg = 0
         for v in tf.trainable_variables():
             reg = reg + tf.nn.l2_loss(v)
-        self.loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits, weights = self.weights_placeholder) + beta*reg)
+        self.loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits) + beta*reg)
 
     def add_train_op(self):
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder[0])
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, tvars), self.config.max_grad_norm)
         self.train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-    def optimize(self, sess, train_x, train_y, lr, l2):
-        prem_batch, prem_len, hyp_batch, hyp_len, dropout = train_x
-        label_batch = train_y
-        d = dict()
-        for i in range(3):
-            d[i] = 0
-        for i in train_y:
-            d[i] += 1
-        s = d[0] + d[1] + d[2]
-        for i in d:
-            if d[i] != 0:
-                d[i] =float(s)/float(d[i])
-            else:
-                d[i] = 0
-        weights_batch = []
-        for i in train_y:
-            weights_batch.append(d[i])
-        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2, lr, label_batch, np.array(weights_batch))
+    def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, dropout,label_batch, lr, l2):
+        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2, lr, label_batch)
         output_feed = [self.train_op, self.logits, self.loss]
         _, logits, loss = sess.run(output_feed, input_feed)
         return np.argmax(logits, axis=1), loss
 
-    def validate(self, sess, valid_x, valid_y):
-        prem_batch, prem_len, hyp_batch, hyp_len = valid_x
-        label_batch = valid_y
-        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len,1, 0, [0], label_batch, [0])
+    def predict(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch):
+        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len,1, 0, 0, label_batch)
         output_feed = [self.logits, self.loss]
         logits, loss = sess.run(output_feed, input_feed)
         return np.argmax(logits, axis=1), loss
-
-    def predict(self, sess, test_x):
-        prem_batch, prem_len, hyp_batch, hyp_len = test_x
-        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, 1)
-        output_feed = [self.logits]
-        logits = sess.run(output_feed, input_feed)
-        return np.argmax(logits[0], axis=1)
 
     def run_train_epoch(self, sess, dataset, lr, dropout, l2):
         print(np.sum([np.product([xi.value for xi in x.get_shape()]) for x in tf.trainable_variables()]))
@@ -188,7 +203,7 @@ class PIModel(object):
         x = 0
         count = 0
         for prem, prem_len, hyp, hyp_len, label in dataset:
-            pred, loss = self.optimize(sess, (prem, prem_len, hyp, hyp_len, dropout), label, lr, l2)
+            pred, loss = self.optimize(sess, prem, prem_len, hyp, hyp_len, dropout, label, lr, l2)
             preds.extend(pred)
             labels.extend(label)
             losses += loss * len(label)
@@ -196,23 +211,13 @@ class PIModel(object):
             count +=1
         return preds, labels, losses / len(labels)
 
-    def run_val_epoch(self, sess, dataset):
-        preds = []
-        labels = []
-        losses = 0.
-        for prem, prem_len, hyp, hyp_len, label in dataset:
-            pred, loss = self.validate(sess, (prem, prem_len, hyp, hyp_len), label)
-            preds.extend(pred)
-            labels.extend(label)
-            losses += loss * len(label)
-        return preds, labels, losses / len(labels)
-
     def run_test_epoch(self, sess, dataset):
         preds = []
         labels = []
         losses = 0.
         for prem, prem_len, hyp, hyp_len, label in dataset:
-            pred = self.predict(sess, (prem, prem_len, hyp, hyp_len))
+            pred, loss = self.predict(sess, prem, prem_len, hyp, hyp_len, label)
             preds.extend(pred)
             labels.extend(label)
-        return preds, labels
+            losses += loss * len(label)
+        return preds, labels, losses / len(labels)

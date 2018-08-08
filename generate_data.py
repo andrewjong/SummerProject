@@ -1,4 +1,4 @@
-from util import sentence
+from data_util import sentence
 import natural_logic_model as nlm
 import os
 import random
@@ -188,29 +188,22 @@ def gcd(a, b):
 def gcd_n(numbers):
     return reduce(lambda x, y: gcd(x, y), numbers)
 
-def get_boolean_encoding_counts(bool_keys, ecounts, ccounts, pcounts):
+def get_boolean_encoding_counts(bool_keys, keys_and_counts):
     counts = []
     for encoding in bool_keys:
         encoding = json.loads(encoding)
-        if encoding[2] == 0:
-            first_simple = sum(ecounts)
-        if encoding[2] == 1:
-            first_simple = sum(ccounts)
-        if encoding[2] == 2:
-            first_simple = sum(pcounts)
-        if encoding[3] == 0:
-            second_simple = sum(ecounts)
-        if encoding[3] == 1:
-            second_simple = sum(ccounts)
-        if encoding[3] == 2:
-            second_simple = sum(pcounts)
+        for i in range(7):
+            if encoding[2] == i:
+                first_simple = sum(keys_and_counts[1][i])
+            if encoding[3] == i:
+                second_simple = sum(keys_and_counts[1][i])
         counts.append(first_simple * second_simple)
     gcd = gcd_n(counts)
     counts = [count/gcd for count in counts]
     return counts
 
 
-def generate_balanced_boolean_data(bool_keys, label, ekeys, ckeys, pkeys,ecounts, ccounts, pcounts, sampling,size, data):
+def generate_balanced_boolean_data(bool_keys, label, keys_and_counts, sampling,size, data):
     #using encoded compound examples in boolkeys, and the encoded simple
     #examples in ekeys, ckeys, and pkeys, this function outputs a list of length
     #size with compound sentence examples
@@ -221,24 +214,14 @@ def generate_balanced_boolean_data(bool_keys, label, ekeys, ckeys, pkeys,ecounts
         bool_counts = [1] * len(bool_keys)
     for i in range(size):
         encoding = json.loads(weighted_selection(bool_keys, bool_counts))
-        if encoding[2] == 0:
-            simple1_encoding = json.loads(weighted_selection(ekeys, ecounts))
-            premise1, hypothesis1 = encoding_to_example(data, simple1_encoding)
-        if encoding[2] == 1:
-            simple1_encoding = json.loads(weighted_selection(ckeys, ccounts))
-            premise1, hypothesis1 = encoding_to_example(data, simple1_encoding)
-        if encoding[2] == 2:
-            simple1_encoding = json.loads(weighted_selection(pkeys, pcounts))
-            premise1, hypothesis1 = encoding_to_example(data,simple1_encoding)
-        if encoding[3] == 0:
-            simple2_encoding = json.loads(weighted_selection(ekeys, ecounts))
-            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
-        if encoding[3] == 1:
-            simple2_encoding = json.loads(weighted_selection(ckeys, ccounts))
-            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
-        if encoding[3] == 2:
-            simple2_encoding = json.loads(weighted_selection(pkeys, pcounts))
-            premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
+        for i in range(7):
+            if encoding[2] == i:
+                simple1_encoding = json.loads(weighted_selection(keys_and_counts[0][i], keys_and_counts[1][i]))
+                premise1, hypothesis1 = encoding_to_example(data, simple1_encoding)
+        for i in range(7):
+            if encoding[3] == i:
+                simple2_encoding = json.loads(weighted_selection(keys_and_counts[0][i], keys_and_counts[1][i]))
+                premise2, hypothesis2 = encoding_to_independent_example(data, simple2_encoding, premise1, hypothesis1)
         conjunctions = ["or", "and", "then"]
         premise_conjunction = conjunctions[encoding[0]]
         hypothesis_conjunction = conjunctions[encoding[1]]
@@ -251,23 +234,37 @@ def generate_balanced_boolean_data(bool_keys, label, ekeys, ckeys, pkeys,ecounts
         result.append((premise_compound, label, hypothesis_compound))
     return result
 
-def trim_simple_encodings(data,simple_ratio, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts):
+def sevenclass_simple_encodings(data,simple_ratio, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts):
     #This function trims simple nli encodings for use in
     #generating compound sentences see paper for why this is necessary
+    new_eqkeys = []
     new_ekeys = []
+    new_rekeys = []
+    new_akeys = []
     new_ckeys = []
+    new_cokeys = []
     new_pkeys = []
+    new_eqcounts= []
     new_ecounts= []
+    new_recounts= []
+    new_acounts = []
     new_ccounts = []
+    new_cocounts= []
     new_pcounts = []
     for encoding, count in zip(ekeys, ecounts):
         premise, hypothesis = encoding_to_example(data,json.loads(encoding))
         if nlm.compute_simple_relation(premise, hypothesis) == "entails" and random.uniform(0,1) < simple_ratio:
             new_ekeys.append(encoding)
             new_ecounts.append(int(count))
+        else:
+            new_eqkeys.append(encoding)
+            new_eqcounts.append(int(count))
     for encoding, count in zip(ckeys, ccounts):
         premise, hypothesis = encoding_to_example(data,json.loads(encoding))
         if nlm.compute_simple_relation(premise, hypothesis) == "alternation" and random.uniform(0,1) < simple_ratio:
+            new_akeys.append(encoding)
+            new_acounts.append(int(count))
+        else:
             new_ckeys.append(encoding)
             new_ccounts.append(int(count))
     for encoding, count in zip(pkeys, pcounts):
@@ -275,11 +272,17 @@ def trim_simple_encodings(data,simple_ratio, ekeys, ckeys, pkeys, ecounts, ccoun
         if nlm.compute_simple_relation(premise, hypothesis) == "independence" and random.uniform(0,1) < simple_ratio:
             new_pkeys.append(encoding)
             new_pcounts.append(int(count))
-    return new_ekeys, new_ckeys, new_pkeys, new_ecounts, new_ccounts, new_pcounts
+        elif nlm.compute_simple_relation(premise, hypothesis) == "cover" and random.uniform(0,1) < simple_ratio:
+            new_cokeys.append(encoding)
+            new_cocounts.append(int(count))
+        else:
+            new_rekeys.append(encoding)
+            new_recounts.append(int(count))
+    return ((new_eqkeys, new_ekeys, new_rekeys, new_akeys, new_ckeys, new_cokeys, new_pkeys), (new_eqcounts,new_ecounts,new_recounts,new_acounts, new_ccounts, new_cocounts, new_pcounts))
 
 
-def example_count(data, encoding):
-    count = 0
+def level0_example_count(data, encoding):
+    count = 1
     noun_object_size = len(data["things"])
     verb_size = len(data["transitive_verbs"])
     noun_subject_size = len(data["agents"])
@@ -287,50 +290,78 @@ def example_count(data, encoding):
     object_adjective_size = len(data["object_adjectives"])
     adverb_size = len(data["adverbs"])
     if encoding[-1] == 1:
-        count += noun_object_size
+        count *= noun_object_size
     else:
-        count += noun_object_size * noun_object_size - noun_object_size
+        count *= noun_object_size * noun_object_size - noun_object_size
     if encoding[-2] == 1:
-        count += verb_size
+        count *= verb_size
     else:
-        count += verb_size * verb_size - verb_size
+        count *= verb_size * verb_size - verb_size
     if encoding[-3] == 1:
-        count += noun_subject_size
+        count *= noun_subject_size
     else:
-        count += noun_subject_size * noun_subject_size - noun_subject_size
+        count *= noun_subject_size * noun_subject_size - noun_subject_size
     if encoding[-4] == 0:
-        count += adverb_size + 1
+        count *= adverb_size + 1
     elif encoding[-4] == 1 or encoding[-4] == 2:
-        count += adverb_size
+        count *= adverb_size
     else:
-        count += (adverb_size + 1)^2 - 3* adverb_size - 1
+        count *= (adverb_size + 1)^2 - 3* adverb_size - 1
     if encoding[-5] == 0:
-        count += object_adjective_size + 1
+        count *= object_adjective_size + 1
     elif encoding[-5] == 1 or encoding[-5] == 2:
-        count += object_adjective_size
+        count *= object_adjective_size
     else:
-        count += (object_adjective_size + 1)^2 - 3* object_adjective_size - 1
+        count *= (object_adjective_size + 1)^2 - 3* object_adjective_size - 1
     if encoding[-6] == 0:
-        count += subject_adjective_size + 1
+        count *= subject_adjective_size + 1
     elif encoding[-6] == 1 or encoding[-6] == 2:
-        count += subject_adjective_size
+        count *= subject_adjective_size
     else:
-        count += (subject_adjective_size + 1)^2 - 3* subject_adjective_size - 1
+        count *= (subject_adjective_size + 1)^2 - 3* subject_adjective_size - 1
     return count
 
-def get_simple_encoding_counts(data, ekeys, ckeys, pkeys):
+def level2_example_count(data, encoding):
+    count = 1
+    if encoding[-1] == 1:
+        if encoding[-5] == 0:
+            count *= 5
+        elif encoding[-5] == 1 or encoding[-5] == 2:
+            count *= 5
+    if encoding[-2] == 1:
+        if encoding[-4] == 0:
+            count *= 5
+        elif encoding[-4] == 1 or encoding[-4] == 2:
+            count *= 5
+    if encoding[-3] == 1:
+        if encoding[-6] == 0:
+            count *= 5
+        elif encoding[-6] == 1 or encoding[-6] == 2:
+            count *= 5
+    return count
+
+def get_simple_encoding_counts(data, level, ekeys, ckeys, pkeys):
     ecounts = []
     ccounts = []
     pcounts = []
     for encoding in ekeys:
         encoding = json.loads(encoding)
-        ecounts.append(example_count(data,encoding))
+        if level == "level 0":
+            ecounts.append(level0_example_count(data,encoding))
+        else:
+            ecounts.append(level2_example_count(data,encoding))
     for encoding in ckeys:
         encoding = json.loads(encoding)
-        ccounts.append(example_count(data,encoding))
+        if level == "level 0":
+            ccounts.append(level0_example_count(data,encoding))
+        else:
+            ccounts.append(level2_example_count(data,encoding))
     for encoding in pkeys:
         encoding = json.loads(encoding)
-        pcounts.append(example_count(data,encoding))
+        if level == "level 0":
+            pcounts.append(level0_example_count(data,encoding))
+        else:
+            pcounts.append(level2_example_count(data,encoding))
     gcd = gcd_n(ecounts)
     ecounts = [ecount/gcd for ecount in ecounts]
     gcd = gcd_n(ccounts)
@@ -341,13 +372,13 @@ def get_simple_encoding_counts(data, ekeys, ckeys, pkeys):
 
 def weighted_selection(keys, counts):
     total = sum(counts)
-    x = random.uniform(1,total)
+    x = random.randint(1,total)
     for key, count in zip(keys, counts):
         x -= count
         if x <= 0:
             return key
 
-def generate_balanced_data(simple_filename, boolean_filename, simple_size, boolean_size, data, simple_sampling = "level 0", boolean_sampling = "level 0",keys_and_counts = None, restrictions=[1000000]*19):
+def generate_balanced_data(simple_filename, boolean_filename, simple_size, boolean_size, data, simple_sampling = "level 2", boolean_sampling = "level 1",keys_and_counts = None, restrictions=[1000000]*19):
     #Using simple_filename generated from build_simple_file and
     #boolean_filename from build_boolean_file generates a list of NLI inpus
     #with simple_size simple examples and boolean_size compound examples
@@ -356,8 +387,8 @@ def generate_balanced_data(simple_filename, boolean_filename, simple_size, boole
     ekeys = list(e.keys())
     ckeys = list(c.keys())
     pkeys = list(p.keys())
-    if simple_sampling == "level 0":
-        ecounts, ccounts, pcounts = get_simple_encoding_counts(data, ekeys, ckeys, pkeys)
+    if simple_sampling == "level 0" or simple_sampling == "level 2" :
+        ecounts, ccounts, pcounts = get_simple_encoding_counts(data, simple_sampling, ekeys, ckeys, pkeys)
     if simple_sampling == "level 1":
         ecounts = [1] * len(ekeys)
         ccounts = [1] * len(ckeys)
@@ -382,11 +413,9 @@ def generate_balanced_data(simple_filename, boolean_filename, simple_size, boole
     bool_ckeys = list(bool_c.keys())
     bool_pkeys = list(bool_p.keys())
     if keys_and_counts == None:
-        ekeys, ckeys, pkeys, ecounts, ccounts, pcounts = trim_simple_encodings(data,1, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts)
-    else:
-        ekeys, ckeys, pkeys, ecounts, ccounts, pcounts = keys_and_counts
-    examples += generate_balanced_boolean_data(bool_ekeys, "entails", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
-    examples += generate_balanced_boolean_data(bool_ckeys, "contradicts", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
-    examples += generate_balanced_boolean_data(bool_pkeys, "permits", ekeys, ckeys, pkeys, ecounts, ccounts, pcounts, boolean_sampling, bool_label_size, data)
+        keys_and_counts = sevenclass_simple_encodings(data,1, ekeys, ckeys, pkeys, ecounts, ccounts, pcounts)
+    examples += generate_balanced_boolean_data(bool_ekeys, "entails", keys_and_counts, boolean_sampling, bool_label_size, data)
+    examples += generate_balanced_boolean_data(bool_ckeys, "contradicts", keys_and_counts, boolean_sampling, bool_label_size, data)
+    examples += generate_balanced_boolean_data(bool_pkeys, "permits", keys_and_counts, boolean_sampling, bool_label_size, data)
     random.shuffle(examples)
     return examples

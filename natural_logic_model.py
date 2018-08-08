@@ -1,5 +1,5 @@
 import json
-from util import sentence
+from data_util import sentence
 
 def strong_composition(signature1, signature2, relation1, relation2):
     #returns the stronger relation of the first relation/signature composed
@@ -222,10 +222,23 @@ def compute_boolean_relation(premise_sentence1, premise_conjunction,premise_sent
     conjunction_negation_relation = negation_phrase(conjunction_negation_signature, conjunction_relation)
     return conjunction_negation_relation
 
+def basemod(base, mod, relation):
+    if relation == "equivalence":
+        return "(" + base + "*" + mod + "+" + base + ")"
+    if relation == "entails":
+        return "(" +base + "*" + mod + ")"
+    if relation == "reverse entails":
+        return "(" +base + "*" + mod + ")"
+    else:
+        return "(" +base + "*" + base + "*" + "(" + "1 + " + mod + ")" + "*" + "(" + "1 + " + mod + ")" + "- 3*"+base + "*" + mod + "-" + base +  ")"
+
 def test_simple():
-    x = dict()
-    for relation in relations:
-        x[relation] = set()
+    x = {"permits":dict(), "contradicts":dict(), "entails":dict()}
+    for k in x:
+        for VP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+            for object_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+                for subject_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
+                    x[k][(VP_relation, object_NP_relation, subject_NP_relation)] = 0
     for VP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
         for object_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
             for subject_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
@@ -239,4 +252,31 @@ def test_simple():
                                     negverb_relation = negation_phrase(verb_negation_signature, object_negDP_relation)
                                     subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
                                     subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
-                                    x[object_DP_relation].add(get_label(subject_NegDP_relation))
+                                    x[get_label(subject_NegDP_relation)][(VP_relation, object_NP_relation, subject_NP_relation)] +=1
+    count = 0
+    count2 = 0
+    for k in x["permits"]:
+        if k[0] != "independence" and k[1] != "independence" and k[2] != "independence":
+            count += x["permits"][k]
+        count2 += x["permits"][k]
+    print(count,count2,count/count2)
+    expression = ""
+    for k in x["entails"]:
+        if x["entails"][k] != 0:
+            expression += str(x["entails"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
+    print(expression, "\n\n")
+    expression = ""
+    for k in x["contradicts"]:
+        if x["contradicts"][k] != 0:
+            expression += str(x["contradicts"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
+    print(expression, "\n\n")
+    expression = ""
+    for k in x["permits"]:
+        if x["permits"][k] != 0:
+            expression += str(x["permits"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
+    print(expression, "\n\n")
+    expression = ""
+    for k in x["entails"]:
+        if x["entails"][k] != 0:
+            expression += str(x["entails"][k]) + "*" + basemod("50", "50", k[0]) + "*" + basemod("50", "50", k[1]) +"*" + basemod("50", "50", k[2]) + "+"
+    print(expression, "\n\n")
