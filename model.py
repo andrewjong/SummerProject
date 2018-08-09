@@ -103,11 +103,8 @@ class PIModel(object):
                 _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                              sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
 
-            prem_projection = tf.layers.dense(prem_out, self.config.state_size/2)
-            hyp_projection = tf.layers.dense(hyp_out, self.config.state_size/2)
-
             representation = tf.layers.dense(
-                                            tf.concat([prem_out, hyp_out], 1),
+                                            tf.concat([prem_out.h, hyp_out.h], 1),
                                             self.config.state_size,
                                             activation=tf.nn.relu,
                                             kernel_initializer=xavier,
