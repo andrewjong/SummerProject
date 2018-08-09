@@ -22,6 +22,10 @@ class sentence:
             self.negation = "does not"
             self.verb_index = 2#ensures a verb following negation is in bare form
         self.string = self.construct_string([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
+        if self.negation == "":
+            self.emptystring = self.construct_emptystring([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,"",self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
+        else:
+            self.emptystring = self.construct_emptystring([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
         self.construct_logical_form_joint_predicates()
         self.initialize_natlog()
 
@@ -63,6 +67,18 @@ class sentence:
         for word in lst:
             if word != "":
                 result += word + " "
+        return result[:-1]
+
+ def construct_emptystring(self,lst):
+        #turn a list of words into a single sentence string
+        result = ""
+        for word in lst:
+            if word == "not every":
+                result += "notevery" + " "
+            elif word != "":
+                result += word + " "
+            else:
+                result += "emptystring" + " "
         return result[:-1]
 
     def construct_logical_form_joint_predicates(self):

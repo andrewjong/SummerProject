@@ -95,11 +95,11 @@ class PIModel(object):
         # ingest hypothesis and premise with two different RNNs, then concatenate the outputs of each
         if self.model_type == 'siamese':
             with tf.variable_scope("prem-siamese"):
-                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
                 _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems,\
                               sequence_length=self.prem_len_placeholder, dtype=tf.float32)
             with tf.variable_scope("hyp-siamese"):
-                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
                 _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                              sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
 
@@ -142,6 +142,27 @@ class PIModel(object):
                                             )
 
             self.logits = tf.layers.dense(representation, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+        if self.model_type == "restcomp":
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"comp", reuse=False)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"comp")
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"comp")
+            neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])],"comp")
+            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"comp")
+            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"comp")
+            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"comp")
+            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"comp")
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"comp")
+            subjectNP = self.combine([subjecta, subjectn],"comp")
+            objectNP = self.combine([objecta, objectn],"comp")
+            VP = self.combine([adverb, verb],"comp")
+            objectDP1 = self.combine([objectd, objectNP],"comp")
+            objectDP2 = self.combine([objectDP1, VP],"comp")
+            negobjectDP = self.combine([neg, objectDP2],"comp")
+            final = self.combine([subjectd, subjectNP,],"comp")
+            final2 = self.combine([final, negobjectDP],"comp")
+            self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
