@@ -80,7 +80,7 @@ class PIModel(object):
                                 activation=tf.nn.relu,
                                 kernel_initializer=xavier,
                                 use_bias=True,
-                                name="meme",
+                                name=name,
                                 reuse=reuse
                                 )
 
@@ -195,7 +195,7 @@ class PIModel(object):
             pobjectd = tf.reshape(self.embed_prems[:,7,:], [-1,300])
             pobjectn = tf.reshape(self.embed_prems[:,8,:], [-1,300])
             pobjecta = tf.reshape(self.embed_prems[:,9,:], [-1,300])
-            psubjectNP = self.combine([psubjecta, psubjectn],"comp")
+            psubjectNP = self.combine([psubjecta, psubjectn],"comp",reuse=False)
             pobjectNP = self.combine([pobjecta, pobjectn],"comp")
             pVP = self.combine([padverb, pverb],"comp")
             pobjectDP1 = self.combine([pobjectd, pobjectNP],"comp")
@@ -212,7 +212,7 @@ class PIModel(object):
             hobjectd = tf.reshape(self.embed_hyps[:,7,:], [-1,300])
             hobjectn = tf.reshape(self.embed_hyps[:,8,:], [-1,300])
             hobjecta = tf.reshape(self.embed_hyps[:,9,:], [-1,300])
-            hsubjectNP = self.combine([hsubjecta, hsubjectn],"comp2")
+            hsubjectNP = self.combine([hsubjecta, hsubjectn],"comp2", reuse=False)
             hobjectNP = self.combine([hobjecta, hobjectn],"comp2")
             hVP = self.combine([hadverb, hverb],"comp2")
             hobjectDP1 = self.combine([hobjectd, hobjectNP],"comp2")
