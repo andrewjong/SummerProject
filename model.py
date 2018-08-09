@@ -181,7 +181,25 @@ class PIModel(object):
             negobjectDP = self.combine([neg, objectDP2],"comp")
             final = self.combine([subjectd, subjectNP,],"comp")
             final2 = self.combine([final, negobjectDP],"comp")
-            self.logits = tf.layers.dense(final2, 3,
+            subjectd2 = self.combine([tf.reshape(self.embed_prems[:,0 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,0 + 10,:], [-1,300])],"comp")
+            subjectn2 = self.combine([tf.reshape(self.embed_prems[:,1 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,1 + 10,:], [-1,300])],"comp")
+            subjecta2 = self.combine([tf.reshape(self.embed_prems[:,2 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,2 + 10,:], [-1,300])],"comp")
+            neg2 = self.combine([tf.reshape(self.embed_prems[:,4 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,4 + 10,:], [-1,300])],"comp")
+            verb2 = self.combine([tf.reshape(self.embed_prems[:,5 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,5 + 10,:], [-1,300])],"comp")
+            adverb2 = self.combine([tf.reshape(self.embed_prems[:,6 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,6 + 10,:], [-1,300])],"comp")
+            objectd2 = self.combine([tf.reshape(self.embed_prems[:,7 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,7 + 10,:], [-1,300])],"comp")
+            objectn2 = self.combine([tf.reshape(self.embed_prems[:,8 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,8 + 10,:], [-1,300])],"comp")
+            objecta2 = self.combine([tf.reshape(self.embed_prems[:,9 + 10,:], [-1,300]), tf.reshape(self.embed_hyps[:,9 + 10,:], [-1,300])],"comp")
+            subjectNP2 = self.combine([subjecta2, subjectn2],"comp")
+            objectNP2 = self.combine([objecta2, objectn2],"comp")
+            VP2 = self.combine([adverb2, verb2],"comp")
+            objectDP12 = self.combine([objectd2, objectNP2],"comp")
+            objectDP22 = self.combine([objectDP12, VP2],"comp")
+            negobjectDP2 = self.combine([neg2, objectDP22],"comp")
+            final2 = self.combine([subjectd2, subjectNP2],"comp")
+            final22 = self.combine([final2, negobjectDP2],"comp")
+            truefinal = self.combine([final2,final22], "comp")
+            self.logits = tf.layers.dense(truefinal, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
