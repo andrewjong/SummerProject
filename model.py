@@ -198,6 +198,12 @@ class PIModel(object):
             negobjectDP2 = self.combine([neg2, objectDP22],"comp")
             final2 = self.combine([subjectd2, subjectNP2],"comp")
             final22 = self.combine([final2, negobjectDP2],"comp")
+            final2 = tf.nn.softmax(tf.layers.dense(final2, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True))
+            final22 = tf.nn.softmax(tf.layers.dense(final22, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True))
             conj = self.combine([tf.reshape(self.embed_prems[:,10,:], [-1,300]), tf.reshape(self.embed_hyps[:,10,:], [-1,300])],"comp")
             truefinal1 = self.combine([conj, final2], "comp")
             truefinal2 = self.combine([truefinal1,final22], "comp")
