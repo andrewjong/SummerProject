@@ -29,7 +29,6 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
             example = json.loads(line)
             prem = du.parse_sentence(data,example["sentence1"])[0].emptystring + " " + du.parse_sentence(data,example["sentence1"])[1]+ " " + du.parse_sentence(data,example["sentence1"])[2].emptystring
             hyp = du.parse_sentence(data,example["sentence2"])[0].emptystring + " " + du.parse_sentence(data,example["sentence2"])[1]+ " " + du.parse_sentence(data,example["sentence2"])[2].emptystring
-            print(prem)
             premises.append(sentence_to_id(prem, word_to_id, max_premise_length))
             premise_lengths.append(len(prem.split()))
             hypotheses.append(sentence_to_id(hyp, word_to_id, max_hypothesis_length))

@@ -205,8 +205,8 @@ class PIModel(object):
             #                              kernel_initializer=xavier,
             #                              use_bias=True))
             conj = self.combine([tf.reshape(self.embed_prems[:,10,:], [-1,300]), tf.reshape(self.embed_hyps[:,10,:], [-1,300])],"comp")
-            truefinal1 = self.combine([conj, final2], "comp")
-            truefinal2 = self.combine([truefinal1,final22], "comp")
+            truefinal1 = self.combine([conj, final2], "comp2", resuse=False)
+            truefinal2 = self.combine([truefinal1,final22], "comp2")
             self.logits = tf.layers.dense(truefinal2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)

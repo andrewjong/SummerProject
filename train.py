@@ -38,10 +38,10 @@ def confuse(preds, labels):
     return matrix
 
 if __name__ == '__main__':
-    experiment = "experiment3_level2"
+    experiment = "experiment2_level21"
     pretrained_embeddings = model_util.get_glove_vec("glove/glove.6B.300d.txt", vocab=model_util.get_vocab())
     word_to_id = model_util.get_word_to_id("glove/glove.6B.300d.txt", vocab=model_util.get_vocab())
-    m = PIModel(config, pretrained_embeddings, "siamese")
+    m = PIModel(config, pretrained_embeddings, "comp")
     labels = ['entails','contradicts','permits']
     cat_names = ['{}=>{}'.format(x,y) for x,y in itertools.product(labels,labels)]
     results = dict()
@@ -88,4 +88,3 @@ if __name__ == '__main__':
                                 #preds_test, labels_test, loss_test = m.run_test_epoch(sess, test_data)
                                         with open("compvary" + experiment + str(lr) + str(l2) + str(batch_size), "w") as f:
                                             f.write(json.dumps((results, [int(pred) for pred in best_preds])))
-                                 
