@@ -61,7 +61,7 @@ class sentence:
         else:
             self.verb_negation = True
 
-    def construct_string(self,lst):
+     def construct_string(self,lst):
         #turn a list of words into a single sentence string
         result = ""
         for word in lst:
@@ -69,7 +69,7 @@ class sentence:
                 result += word + " "
         return result[:-1]
 
- def construct_emptystring(self,lst):
+     def construct_emptystring(self,lst):
         #turn a list of words into a single sentence string
         result = ""
         for word in lst:
