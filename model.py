@@ -176,7 +176,7 @@ class PIModel(object):
             subjectNP = self.combine([subjecta, subjectn],"comp")
             objectNP = self.combine([objecta, objectn],"comp")
             VP = self.combine([adverb, verb],"comp")
-            objectDP1 = self.combine([objectd, objectNP],"comp")
+            objectDP1 = self.combine([objectd, objectNP],"comp") 
             objectDP2 = self.combine([objectDP1, VP],"comp")
             negobjectDP = self.combine([neg, objectDP2],"comp")
             final = self.combine([subjectd, subjectNP,],"comp")
