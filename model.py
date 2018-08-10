@@ -163,7 +163,29 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
-        if self.model_type == "comp":
+        if self.model_type == "simpcomp":
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"lexcomp", reuse=False)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"lexcomp")
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"lexcomp")
+            neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])],"lexcomp")
+            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"lexcomp")
+            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"lexcomp")
+            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"lexcomp")
+            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"lexcomp")
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"lexcomp")
+            subjectNP = self.combine([subjecta, subjectn],"comp", reuse=False)
+            objectNP = self.combine([objecta, objectn],"comp")
+            VP = self.combine([adverb, verb],"comp")
+            objectDP1 = self.combine([objectd, objectNP],"comp")
+            objectDP2 = self.combine([objectDP1, VP],"comp")
+            negobjectDP = self.combine([neg, objectDP2],"comp")
+            final = self.combine([subjectd, subjectNP,],"comp")
+            final2 = self.combine([final, negobjectDP],"comp")
+            self.logits = tf.layers.dense(final2, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+
+        if self.model_type == "boolcomp":
             subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"lexcomp", reuse=False)
             subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"lexcomp")
             subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"lexcomp")
@@ -211,7 +233,48 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
-        if self.model_type == "sepcomp":
+        if self.model_type == "sepsimpcomp":
+            psubjectd = tf.reshape(self.embed_prems[:,0,:], [-1,300])
+            psubjectn = tf.reshape(self.embed_prems[:,1,:], [-1,300])
+            psubjecta = tf.reshape(self.embed_prems[:,2,:], [-1,300])
+            pneg = tf.reshape(self.embed_prems[:,4,:], [-1,300])
+            pverb = tf.reshape(self.embed_prems[:,5,:], [-1,300])
+            padverb = tf.reshape(self.embed_prems[:,6,:], [-1,300])
+            pobjectd = tf.reshape(self.embed_prems[:,7,:], [-1,300])
+            pobjectn = tf.reshape(self.embed_prems[:,8,:], [-1,300])
+            pobjecta = tf.reshape(self.embed_prems[:,9,:], [-1,300])
+            psubjectNP = self.combine([psubjecta, psubjectn],"comp",reuse=False)
+            pobjectNP = self.combine([pobjecta, pobjectn],"comp")
+            pVP = self.combine([padverb, pverb],"comp")
+            pobjectDP1 = self.combine([pobjectd, pobjectNP],"comp")
+            pobjectDP2 = self.combine([pobjectDP1, pVP],"comp")
+            pnegobjectDP = self.combine([pneg, pobjectDP2],"comp")
+            pfinal = self.combine([psubjectd, psubjectNP,],"comp")
+            pfinal2 = self.combine([pfinal, pnegobjectDP],"comp")
+            hsubjectd = tf.reshape(self.embed_hyps[:,0,:], [-1,300])
+            hsubjectn = tf.reshape(self.embed_hyps[:,1,:], [-1,300])
+            hsubjecta = tf.reshape(self.embed_hyps[:,2,:], [-1,300])
+            hneg = tf.reshape(self.embed_hyps[:,4,:], [-1,300])
+            hverb = tf.reshape(self.embed_hyps[:,5,:], [-1,300])
+            hadverb = tf.reshape(self.embed_hyps[:,6,:], [-1,300])
+            hobjectd = tf.reshape(self.embed_hyps[:,7,:], [-1,300])
+            hobjectn = tf.reshape(self.embed_hyps[:,8,:], [-1,300])
+            hobjecta = tf.reshape(self.embed_hyps[:,9,:], [-1,300])
+            hsubjectNP = self.combine([hsubjecta, hsubjectn],"comp2", reuse=False)
+            hobjectNP = self.combine([hobjecta, hobjectn],"comp2")
+            hVP = self.combine([hadverb, hverb],"comp2")
+            hobjectDP1 = self.combine([hobjectd, hobjectNP],"comp2")
+            hobjectDP2 = self.combine([hobjectDP1, hVP],"comp2")
+            hnegobjectDP = self.combine([hneg, hobjectDP2],"comp2")
+            hfinal = self.combine([hsubjectd, hsubjectNP,],"comp2")
+            hfinal2 = self.combine([hfinal, hnegobjectDP],"comp2")
+            final = self.combine([pfinal2, hfinal2], "final", reuse=False)
+            final2 = self.combine([final], "final2", reuse=False)
+            self.logits = tf.layers.dense(final2, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+
+        if self.model_type == "sepboolcomp":
             psubjectd = tf.reshape(self.embed_prems[:,0,:], [-1,300])
             psubjectn = tf.reshape(self.embed_prems[:,1,:], [-1,300])
             psubjecta = tf.reshape(self.embed_prems[:,2,:], [-1,300])
