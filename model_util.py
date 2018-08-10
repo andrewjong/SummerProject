@@ -27,13 +27,14 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
             random.shuffle(lines)
         for line in lines:
             example = json.loads(line)
-            prem = du.parse_sentence(data,example["sentence1"])[0].emptystring + " " + du.parse_sentence(data,example["sentence1"])[1]+ " " + du.parse_sentence(data,example["sentence1"])[2].emptystring
-            hyp = du.parse_sentence(data,example["sentence2"])[0].emptystring + " " + du.parse_sentence(data,example["sentence2"])[1]+ " " + du.parse_sentence(data,example["sentence2"])[2].emptystring
-            premises.append(sentence_to_id(prem, word_to_id, max_premise_length))
-            premise_lengths.append(len(prem.split()))
-            hypotheses.append(sentence_to_id(hyp, word_to_id, max_hypothesis_length))
-            hypothesis_lengths.append(len(hyp.split()))
-            if False:
+            if " and " in example["sentence1"] or " or " in example["sentence1"] or " then " in example["sentence1"]:
+                prem = du.parse_sentence(data,example["sentence1"])[0].emptystring + " " + du.parse_sentence(data,example["sentence1"])[1]+ " " + du.parse_sentence(data,example["sentence1"])[2].emptystring
+                hyp = du.parse_sentence(data,example["sentence2"])[0].emptystring + " " + du.parse_sentence(data,example["sentence2"])[1]+ " " + du.parse_sentence(data,example["sentence2"])[2].emptystring
+                premises.append(sentence_to_id(prem, word_to_id, max_premise_length))
+                premise_lengths.append(len(prem.split()))
+                hypotheses.append(sentence_to_id(hyp, word_to_id, max_hypothesis_length))
+                hypothesis_lengths.append(len(hyp.split()))
+            else:
                 premises.append(sentence_to_id(du.parse_sentence(data,example["sentence1"])[0].emptystring, word_to_id, max_premise_length))
                 premise_lengths.append(len(du.parse_sentence(data,example["sentence1"])[0].emptystring.split()))
                 hypotheses.append(sentence_to_id(du.parse_sentence(data,example["sentence2"])[0].emptystring, word_to_id, max_hypothesis_length))
