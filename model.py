@@ -72,11 +72,11 @@ class PIModel(object):
         bs = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws) + bs
 
-    def combine(self,stuff, name, reuse=True):
+    def combine(self,stuff, name, reuse=True, size=self.config.state_size):
         xavier = tf.contrib.layers.xavier_initializer()
         return tf.layers.dense(
                                 tf.concat(stuff, 1),
-                                self.config.state_size,
+                                size,
                                 activation=tf.nn.relu,
                                 kernel_initializer=xavier,
                                 use_bias=True,
@@ -142,23 +142,23 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
         if self.model_type == "restcomp":
-            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"comp", reuse=False)
-            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"comp")
-            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"comp")
-            neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])],"comp")
-            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"comp")
-            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"comp")
-            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"comp")
-            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"comp")
-            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"comp")
-            subjectNP = self.combine([subjecta, subjectn],"comp")
-            objectNP = self.combine([objecta, objectn],"comp")
-            VP = self.combine([adverb, verb],"comp")
-            objectDP1 = self.combine([objectd, objectNP],"comp")
-            objectDP2 = self.combine([objectDP1, VP],"comp")
-            negobjectDP = self.combine([neg, objectDP2],"comp")
-            final = self.combine([subjectd, subjectNP,],"comp")
-            final2 = self.combine([final, negobjectDP],"comp")
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"comp", reuse=False, size=16)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"comp", size=2)
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"comp", size=4)
+            neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])],"comp",size=4)
+            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"comp",size=2)
+            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"comp",size=4)
+            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"comp",size=16)
+            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"comp",size=2)
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"comp"size=4)
+            subjectNP = self.combine([subjecta, subjectn],"acomp", reuse=False, size=4)
+            objectNP = self.combine([objecta, objectn],"scomp", reuse=False, size=4)
+            VP = self.combine([adverb, verb],"dcomp", reuse=False, size=4)
+            objectDP1 = self.combine([objectd, objectNP],"fcomp", reuse=False, size=7)
+            objectDP2 = self.combine([objectDP1, VP],"glcomp", reuse=False, size=7)
+            negobjectDP = self.combine([neg, objectDP2],"afcomp", reuse=False, size=7)
+            final = self.combine([subjectd, subjectNP,],"wefcomp", reuse=False, size=7)
+            final2 = self.combine([final, negobjectDP],"fqecomp", reuse=False, size=7)
             self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
