@@ -76,7 +76,7 @@ class PIModel(object):
         if size is None:
             size = self.config.state_size
         xavier = tf.contrib.layers.xavier_initializer()
-        return tf.nn.softmax(tf.layers.dense(
+        return tf.layers.dense(
                                 tf.concat(stuff, 1),
                                 size,
                                 activation=tf.nn.relu,
@@ -84,7 +84,7 @@ class PIModel(object):
                                 use_bias=True,
                                 name=name,
                                 reuse=reuse
-                                ))
+                                )
 
     def add_prediction_op(self):
         print("MODEL TYPE:", self.model_type)
@@ -144,15 +144,15 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
         if self.model_type == "restcomp":
-            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"qcomp", reuse=False, size=16)
-            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"zcomp", reuse=False,size=2)
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,300]), tf.reshape(self.embed_hyps[:,0,:], [-1,300])],"ycomp", reuse=False, size=16)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,300]), tf.reshape(self.embed_hyps[:,1,:], [-1,300])],"zcomp",reuse=False, size=2)
             subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,300]), tf.reshape(self.embed_hyps[:,2,:], [-1,300])],"xcomp", reuse=False,size=4)
             neg = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,300]), tf.reshape(self.embed_hyps[:,4,:], [-1,300])],"vcomp",reuse=False,size=4)
-            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"bcomp",reuse=False,size=2)
-            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"ncomp",reuse=False,size=4)
-            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"mcomp",reuse=False,size=16)
-            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"kcomp",reuse=False,size=2)
-            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"lcomp", reuse=False,size=4)
+            verb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,300]), tf.reshape(self.embed_hyps[:,5,:], [-1,300])],"zcomp",size=2)
+            adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"xcomp",size=4)
+            objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"ycomp",size=16)
+            objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"zcomp",size=2)
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"xcomp",size=4)
             subjectNP = self.combine([subjecta, subjectn],"acomp", reuse=False, size=4)
             objectNP = self.combine([objecta, objectn],"scomp", reuse=False, size=4)
             VP = self.combine([adverb, verb],"dcomp", reuse=False, size=4)
