@@ -72,7 +72,9 @@ class PIModel(object):
         bs = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws) + bs
 
-    def combine(self,stuff, name, reuse=True, size=self.config.state_size):
+    def combine(self,stuff, name, reuse=True, size=None):
+        if size is None:
+            size = self.config.state_size
         xavier = tf.contrib.layers.xavier_initializer()
         return tf.layers.dense(
                                 tf.concat(stuff, 1),
