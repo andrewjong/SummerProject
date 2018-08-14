@@ -76,7 +76,7 @@ class PIModel(object):
         if size is None:
             size = self.config.state_size
         xavier = tf.contrib.layers.xavier_initializer()
-        return tf.layers.dense(
+        return tf.nn.softmax(tf.layers.dense(
                                 tf.concat(stuff, 1),
                                 size,
                                 activation=tf.nn.relu,
@@ -84,7 +84,7 @@ class PIModel(object):
                                 use_bias=True,
                                 name=name,
                                 reuse=reuse
-                                )
+                                ))
 
     def add_prediction_op(self):
         print("MODEL TYPE:", self.model_type)
