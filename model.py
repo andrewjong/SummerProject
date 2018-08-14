@@ -150,7 +150,7 @@ class PIModel(object):
             adverb = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,300]), tf.reshape(self.embed_hyps[:,6,:], [-1,300])],"comp",size=4)
             objectd = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,300]), tf.reshape(self.embed_hyps[:,7,:], [-1,300])],"comp",size=16)
             objectn = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,300]), tf.reshape(self.embed_hyps[:,8,:], [-1,300])],"comp",size=2)
-            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"comp"size=4)
+            objecta = self.combine([tf.reshape(self.embed_prems[:,9,:], [-1,300]), tf.reshape(self.embed_hyps[:,9,:], [-1,300])],"comp", size=4)
             subjectNP = self.combine([subjecta, subjectn],"acomp", reuse=False, size=4)
             objectNP = self.combine([objecta, objectn],"scomp", reuse=False, size=4)
             VP = self.combine([adverb, verb],"dcomp", reuse=False, size=4)
