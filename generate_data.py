@@ -188,16 +188,23 @@ def gcd(a, b):
 def gcd_n(numbers):
     return reduce(lambda x, y: gcd(x, y), numbers)
 
-def get_boolean_encoding_counts(bool_keys, keys_and_counts):
+def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
     counts = []
+    balance_dict = dict()
+    for i in range(3):
+        for j in range(3):
+            balance_dict[(i,j)] = 0
+    for encoding in bool_keys:
+        balance_dict[tuple(json.loads(encoding)[:2])] += 1
     for encoding in bool_keys:
         encoding = json.loads(encoding)
-        for i in range(7):
-            if encoding[2] == i:
-                first_simple = sum(keys_and_counts[1][i])
-            if encoding[3] == i:
-                second_simple = sum(keys_and_counts[1][i])
-        counts.append(first_simple * second_simple)
+        if level == "level 0":
+            for i in range(7):
+                if encoding[2] == i:
+                    first_simple = sum(keys_and_counts[1][i])
+                if encoding[3] == i:
+                    second_simple = sum(keys_and_counts[1][i])
+            counts.append(first_simple * second_simple)
     gcd = gcd_n(counts)
     counts = [count/gcd for count in counts]
     return counts
@@ -208,8 +215,8 @@ def generate_balanced_boolean_data(bool_keys, label, keys_and_counts, sampling,s
     #examples in ekeys, ckeys, and pkeys, this function outputs a list of length
     #size with compound sentence examples
     result = []
-    if sampling == "level 0":
-        bool_counts = get_boolean_encoding_counts(bool_keys, ecounts, ccounts, pcounts)
+    if sampling == "level 0" or sampling == "level 2":
+        bool_counts = get_boolean_encoding_counts(bool_keys, keys_and_counts, sampling)
     elif sampling == "level 1":
         bool_counts = [1] * len(bool_keys)
     for i in range(size):
