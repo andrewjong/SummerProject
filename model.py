@@ -77,10 +77,10 @@ class PIModel(object):
             M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,1,:], Wh), 1))
             alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
             r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             for i in range(1,10):
                 M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
                 alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
-                Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
                 r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) +tf.tanh(tf.matmul(r, Wt))
             Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
@@ -90,7 +90,7 @@ class PIModel(object):
         h = tf.tanh(tf.matmul(h, Ws1) + bs1)
         Ws2 = tf.Variable(initer([self.config.state_size,3]))
         bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
-        self.logits = tf.matmul(h, Ws) + bs
+        self.logits = tf.matmul(h, Ws2) + bs2
 
     def combine(self,stuff, name, reuse=True, size=None):
         if size is None:
