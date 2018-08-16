@@ -49,13 +49,15 @@ class PIModel(object):
         initer = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("prem"):
-            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems,\
                           sequence_length=self.prem_len_placeholder, dtype=tf.float32)
         with tf.variable_scope("hyp"):
-            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                          sequence_length=self.hyp_len_placeholder, initial_state=prem_out)
+        hyp_out = hyp_out.h
+        prem_out = prem_out.h
         h = hyp_out
         if self.config.attention:
             Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
