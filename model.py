@@ -54,12 +54,12 @@ class PIModel(object):
                           sequence_length=self.prem_len_placeholder, dtype=tf.float32)
         with tf.variable_scope("hyp"):
             hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
-            _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
+            new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                          sequence_length=self.hyp_len_placeholder, initial_state=prem_out)
         hyp_out = hyp_out.h
         prem_out = prem_out.h
         h = hyp_out
-        if self.config.attention:
+        if self.config.attention == "simple":
             Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
             Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             w =  tf.Variable(initer([1,1,self.config.state_size]))
@@ -69,9 +69,27 @@ class PIModel(object):
             Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
             h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
-
-        Ws = tf.Variable(initer([self.config.state_size,3]))
-        bs = tf.Variable(tf.zeros([1,3]) + 1e-3)
+        if self.config.attention == "wordbyword":
+            Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+            Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            Wr = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            w =  tf.Variable(initer([1,1,self.config.state_size]))
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,1,:], Wh), 1))
+            alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+            r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            for i in range(1,10):
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) +tf.tanh(tf.matmul(r, Wt))
+            Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+        Ws1 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
+        bs1 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
+        h = tf.tanh(tf.matmul(h, Ws1) + bs1)
+        Ws2 = tf.Variable(initer([self.config.state_size,3]))
+        bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws) + bs
 
     def combine(self,stuff, name, reuse=True, size=None):
