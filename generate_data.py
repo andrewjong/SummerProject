@@ -194,9 +194,11 @@ def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
     total = 0
     for i in range(3):
         for j in range(3):
-            balance_dict[(i,j)] = 0
+            for k in range(7):
+                for l in range(7):
+                    balance_dict[(i,j,k,l)] = 0
     for encoding in bool_keys:
-        balance_dict[tuple(json.loads(encoding)[:2])] += 1
+        balance_dict[tuple(json.loads(encoding))] += 1
     init = True
     lcm = 0
     for k in balance_dict:
