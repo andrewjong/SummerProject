@@ -1,5 +1,4 @@
 from data_util import sentence
-from math import gcd
 import natural_logic_model as nlm
 import os
 import random
@@ -217,8 +216,8 @@ def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
             counts.append(first_simple * second_simple)
         if level == "level 2":
             counts.append(lcm/balance_dict[tuple(encoding[:2])])
-    gcd = gcd_n(counts)
-    counts = [count/gcd for count in counts]
+    full_gcd = gcd_n(counts)
+    counts = [count/full_gcd for count in counts]
     return counts
 
 
