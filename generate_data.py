@@ -200,7 +200,9 @@ def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
     init = True
     lcm = 0
     for k in balance_dict:
-        if init:
+        if balance_dict[k] ==0:
+            continue
+        elif init:
             lcm = balance_dict[k]
             init = False
         else:
