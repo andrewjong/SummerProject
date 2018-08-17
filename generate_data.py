@@ -219,7 +219,7 @@ def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
                     second_simple = sum(keys_and_counts[1][i])
             counts.append(first_simple * second_simple)
         if level == "level 2":
-            counts.append(lcm/balance_dict[tuple(encoding[:2])])
+            counts.append(lcm/balance_dict[tuple(encoding)])
     full_gcd = gcd_n(counts)
     counts = [count/full_gcd for count in counts]
     return counts
