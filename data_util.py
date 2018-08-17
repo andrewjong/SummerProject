@@ -11,7 +11,7 @@ class sentence:
         self.subject_determiner = subject_determiner
         self.object_determiner = object_determiner
         self.string_object_determiner = object_determiner
-        if negate and object_determiner == "no":
+        if negate and object_determiner == "some":
             self.string_object_determiner = "any"
         self.negation = ""
         self.adverb = adverb
