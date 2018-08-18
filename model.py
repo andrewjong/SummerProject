@@ -74,14 +74,14 @@ class PIModel(object):
             Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wr = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             w =  tf.Variable(initer([1,1,self.config.state_size]))
-            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,1,:], Wh), 1))
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
             alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
             r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
             Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             for i in range(1,10):
                 M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
                 alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
-                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) +tf.tanh(tf.matmul(r, Wt))
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
             Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
             h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
@@ -292,6 +292,28 @@ class PIModel(object):
             hfinal2 = self.combine([hfinal, hnegobjectDP],"comp2")
             final = self.combine([pfinal2, hfinal2], "final", reuse=False)
             final2 = self.combine([final], "final2", reuse=False)
+            premise_nodes = [psubjectd,psubjecta,psubjectn,pneg, padverb, pverb, pobjectd,pobjecta,pobjectn,psubjectNP, pobjectNP, pVP, pobjectDP1, pobjectDP2,pnegobjectDP, pfinal, pfinal2]
+            premise_nodes = [tf.expand_dims(x,1) for x in premise_nodes]
+            premise_nodes = tf.concat(premise_nodes,1)
+            hypothesis_nodes = [hsubjectd,hsubjecta,hsubjectn,hneg, hadverb, hverb, hobjectd,hobjecta,hobjectn,hsubjectNP, hobjectNP, hVP, hobjectDP1, hobjectDP2,hnegobjectDP, hfinal, hfinal2]
+            hypothesis_nodes = [tf.expand_dims(x,1) for x in hypothesis_nodes]
+            hypothesis_nodes = tf.concat(hypothesis_nodes,1)
+            if self.config.attention == "wordbyword":
+                Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+                Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                Wr = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                w =  tf.Variable(initer([1,1,self.config.state_size]))
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(premise_nodes,3)), 3) + tf.expand_dims(tf.matmul(hypothesis_nodes[:,0,:], Wh), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), premise_nodes), 1)
+                Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                for i in range(1,17):
+                    M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(premise_nodes,3)), 3) + tf.expand_dims(tf.matmul(hypothesis_nodes[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                    alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                    r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), premise_nodes), 1) +tf.tanh(tf.matmul(r, Wt))
+                Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                final2 = tf.tanh(tf.matmul(r, Wp) + tf.matmul(final2, Wx))
             self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
