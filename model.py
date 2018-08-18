@@ -109,6 +109,7 @@ class PIModel(object):
     def add_prediction_op(self):
         print("MODEL TYPE:", self.model_type)
         xavier = tf.contrib.layers.xavier_initializer()
+        initer = tf.contrib.layers.xavier_initializer()
 
         # ingest premise with premise-RNN; initialize hypothesis-RNN with output of premise-RNN
         if self.model_type == 'seq2seq':
