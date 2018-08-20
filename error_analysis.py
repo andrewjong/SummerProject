@@ -37,29 +37,39 @@ for p in predictions:
 cm_analysis(true_labels, label_predictions, "goodbool.png", labels)
 conjs = dict()
 totals = dict()
+es = dict()
 relations = ["equivalence", "entails", "reverse entails", "alternation","contradiction", "cover",  "independence"]
 relations2 = ["equivalence", "entails", "reverse entails", "alternation","contradiction", "cover", "independence"]
 for c1 in ["and", "or", "then"]:
     for c2 in ["and", "or", "then"]:
         for r1 in relations:
             for r2 in relations2:
-                conjs[(c1,c2,r1,r2)] = 0
+                conjs[(c1,c2,r1,r2)] = [0,[]]
                 totals[(c1,c2,r1,r2)] = 0
+                es[(c1,c2,r1,r2)] = 0
 for i in range(len(true_labels)):
     premise_parse = data_util.parse_sentence(data,examples[i]["sentence1"])
     hypothesis_parse = data_util.parse_sentence(data,examples[i]["sentence2"])
     if true_labels[i] != label_predictions[i]:
-        conjs[(data_util.parse_sentence(data,examples[i]["sentence1"])[1],data_util.parse_sentence(data,examples[i]["sentence2"])[1], nlm.compute_simple_relation(premise_parse[0], hypothesis_parse[0]),nlm.compute_simple_relation(premise_parse[2], hypothesis_parse[2]))] += 1
+        conjs[(data_util.parse_sentence(data,examples[i]["sentence1"])[1],data_util.parse_sentence(data,examples[i]["sentence2"])[1], nlm.compute_simple_relation(premise_parse[0], hypothesis_parse[0]),nlm.compute_simple_relation(premise_parse[2], hypothesis_parse[2]))][0] += 1
+        conjs[(data_util.parse_sentence(data,examples[i]["sentence1"])[1],data_util.parse_sentence(data,examples[i]["sentence2"])[1], nlm.compute_simple_relation(premise_parse[0], hypothesis_parse[0]),nlm.compute_simple_relation(premise_parse[2], hypothesis_parse[2]))][1].append((true_labels[i],label_predictions[i]))
     totals[(data_util.parse_sentence(data,examples[i]["sentence1"])[1],data_util.parse_sentence(data,examples[i]["sentence2"])[1], nlm.compute_simple_relation(premise_parse[0], hypothesis_parse[0]),nlm.compute_simple_relation(premise_parse[2], hypothesis_parse[2]))] += 1
+
+badbools = [('or', 'or', 'equivalence', 'independence'), ('then', 'then', 'equivalence', 'independence'), ('then', 'and', 'equivalence', 'independence'), ('and', 'then', 'equivalence', 'independence'), ('and', 'and', 'equivalence', 'independence'), ('or', 'or', 'entails', 'independence'), ('and', 'then', 'entails', 'independence'), ('and', 'and', 'entails', 'independence'), ('then', 'then', 'reverse entails', 'independence'), ('then', 'and', 'reverse entails', 'independence'), ('and', 'or', 'reverse entails', 'independence'), ('and', 'then', 'reverse entails', 'independence'), ('and', 'and', 'reverse entails', 'independence'), ('or', 'then', 'contradiction', 'independence'), ('or', 'and', 'contradiction', 'independence'), ('then', 'or', 'contradiction', 'independence'), ('and', 'or', 'contradiction', 'independence'), ('then', 'or', 'cover', 'independence'), ('and', 'or', 'cover', 'independence'), ('and', 'then', 'cover', 'independence'), ('and', 'and', 'cover', 'independence'), ('or', 'then', 'alternation', 'independence'), ('or', 'and', 'alternation', 'independence'), ('and', 'or', 'alternation', 'independence'), ('or', 'or', 'independence', 'equivalence'), ('or', 'then', 'independence', 'equivalence'), ('then', 'then', 'independence', 'equivalence'), ('and', 'and', 'independence', 'equivalence'), ('or', 'or', 'independence', 'entails'), ('or', 'then', 'independence', 'entails'), ('then', 'then', 'independence', 'entails'), ('and', 'and', 'independence', 'entails'), ('and', 'or', 'independence', 'reverse entails'), ('and', 'then', 'independence', 'reverse entails'), ('and', 'and', 'independence', 'reverse entails'), ('or', 'and', 'independence', 'contradiction'), ('then', 'and', 'independence', 'contradiction'), ('and', 'or', 'independence', 'contradiction'), ('and', 'then', 'independence', 'contradiction'), ('and', 'or', 'independence', 'cover'), ('and', 'then', 'independence', 'cover'), ('and', 'and', 'independence', 'cover'), ('or', 'and', 'independence', 'alternation'), ('then', 'and', 'independence', 'alternation'), ('and', 'or', 'independence', 'alternation'), ('and', 'then', 'independence', 'alternation'), ('and', 'or', 'independence', 'independence'), ('and', 'or', 'independence', 'independence'), ('and', 'then', 'independence', 'independence'), ('and', 'then', 'independence', 'independence'), ('and', 'and', 'independence', 'independence'), ('and', 'and', 'independence', 'independence')]
+print("fuck", len(badbools))
 a = 0
 b = 0
+count = 0
 for k in conjs:
-    if conjs[k] != 0:
-        print(k,conjs[k], conjs[k]/totals[k])
+    if k in badbools:
+        count +=1
+    if conjs[k][0] != 0 :
+        print(k,conjs[k], conjs[k][0]/totals[k])
         a +=1
     else:
         b+=1
 print(a,b,a/(a+b), b/(a+b))
+print(count/len(badbools))
 mistakes = [0] * 7
 successes = [0] * 7
 totals = [0] * 7

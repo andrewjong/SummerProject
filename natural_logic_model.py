@@ -222,6 +222,20 @@ def compute_boolean_relation(premise_sentence1, premise_conjunction,premise_sent
     conjunction_negation_relation = negation_phrase(conjunction_negation_signature, conjunction_relation)
     return conjunction_negation_relation
 
+def compute_boolean_relation_test(sentence1_relation,sentence2_relation, premise_conjunction,hypothesis_conjunction):
+    #computes the relation between a premise and hypothesis compound sentence
+    premise_sentence1_negation, premise_conjunction_negation, premise_sentence2_negation= conjunction_to_negation(premise_conjunction)
+    hypothesis_sentence1_negation, hypothesis_conjunction_negation, hypothesis_sentence2_negation= conjunction_to_negation(hypothesis_conjunction)
+    sentence1_negation_signature = negation_merge(premise_sentence1_negation,hypothesis_sentence1_negation)
+    sentence2_negation_signature = negation_merge(premise_sentence2_negation,hypothesis_sentence2_negation)
+    sentence1_negation_relation = negation_phrase(sentence1_negation_signature, sentence1_relation)
+    sentence2_negation_relation = negation_phrase(sentence2_negation_signature, sentence2_relation)
+    conjunction_signature = or_signature
+    conjunction_relation = conjunction_phrase(conjunction_signature, sentence1_negation_relation, sentence2_negation_relation)
+    conjunction_negation_signature = negation_merge(premise_conjunction_negation, hypothesis_conjunction_negation)
+    conjunction_negation_relation = negation_phrase(conjunction_negation_signature, conjunction_relation)
+    return conjunction_negation_relation
+
 def basemod(base, mod, relation):
     if relation == "equivalence":
         return "(" + base + "*" + mod + "+" + base + ")"
@@ -233,6 +247,23 @@ def basemod(base, mod, relation):
         return "(" +base + "*" + base + "*" + "(" + "1 + " + mod + ")" + "*" + "(" + "1 + " + mod + ")" + "- 3*"+base + "*" + mod + "-" + base +  ")"
 
 def test_simple():
+    placerelations = ["equivalence", "entails", "reverse entails","alternation", "contradiction", "cover",  "independence"]
+    conjs = ["or", "and", "then"]
+    badbools = []
+    for r in relations:
+        for r2 in relations2:
+            for c1 in ["or", "and", "then"]:
+                for c2 in ["or", "and", "then"]:
+                    if r == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "permits" and (get_label(compute_boolean_relation_test("entails", r2,c1,c2)) != "permits" or get_label(compute_boolean_relation_test("alternation", r2,c1,c2)) != "permits" or get_label(compute_boolean_relation_test("reverse entails", r2,c1,c2)) != "permits"):
+                        badbools.append((conjs.index(c1),conjs.index(c2),placerelations.index(r),placerelations.index(r2)))
+                    if r2 == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "permits" and (get_label(compute_boolean_relation_test(r,"entails", c1,c2)) != "permits" or get_label(compute_boolean_relation_test(r,"alternation", c1,c2)) != "permits" or get_label(compute_boolean_relation_test(r,"reverse entails", c1,c2)) != "permits"):
+                        badbools.append((conjs.index(c1),conjs.index(c2),placerelations.index(r),placerelations.index(r2)))
+    print(badbools)
+    for x in badbools:
+        print(x)
+
+
+
     x = {"permits":dict(), "contradicts":dict(), "entails":dict()}
     for k in x:
         for VP_relation in ["equivalence", "entails", "reverse entails", "independence"]:

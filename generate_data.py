@@ -189,6 +189,7 @@ def gcd_n(numbers):
     return reduce(lambda x, y: gcd(x, y), numbers)
 
 def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
+    hard_bools = [(0, 0, 0, 6), (1, 1, 0, 6), (1, 2, 0, 6), (2, 1, 0, 6), (2, 2, 0, 6), (0, 0, 1, 6), (1, 1, 1, 6), (1, 2, 1, 6), (1, 0, 2, 6), (1, 1, 2, 6), (1, 2, 2, 6), (2, 1, 2, 6), (2, 2, 2, 6), (0, 1, 4, 6), (0, 2, 4, 6), (1, 0, 4, 6), (2, 0, 4, 6), (1, 0, 5, 6), (1, 1, 5, 6), (1, 2, 5, 6), (2, 0, 5, 6), (0, 1, 3, 6), (0, 2, 3, 6), (1, 0, 3, 6), (0, 0, 6, 0), (0, 2, 6, 0), (1, 1, 6, 0), (2, 2, 6, 0), (0, 0, 6, 1), (0, 2, 6, 1), (1, 1, 6, 1), (2, 2, 6, 1), (1, 0, 6, 2), (1, 1, 6, 2), (1, 2, 6, 2), (0, 1, 6, 4), (1, 0, 6, 4), (1, 2, 6, 4), (2, 1, 6, 4), (1, 0, 6, 5), (1, 1, 6, 5), (1, 2, 6, 5), (0, 1, 6, 3), (1, 0, 6, 3), (1, 2, 6, 3), (2, 1, 6, 3), (1, 0, 6, 6), (1, 0, 6, 6), (1, 1, 6, 6), (1, 1, 6, 6), (1, 2, 6, 6), (1, 2, 6, 6)]
     counts = []
     balance_dict = dict()
     total = 0
@@ -217,7 +218,12 @@ def get_boolean_encoding_counts(bool_keys, keys_and_counts, level):
                     second_simple = sum(keys_and_counts[1][i])
             counts.append(first_simple * second_simple)
         if level == "level 2":
-            counts.append(lcm/balance_dict[tuple(encoding[:2])])
+            if tuple(encoding) in hard_bools:
+                counts.append(20)
+            else:
+                counts.append(1)
+            #counts.append(lcm/balance_dict[tuple(encoding[:2])])
+
     full_gcd = gcd_n(counts)
     counts = [count/full_gcd for count in counts]
     return counts
