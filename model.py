@@ -307,7 +307,8 @@ class PIModel(object):
             negobjectDP = self.LSTMcombine(children =[neg, objectDP2])
             final = self.LSTMcombine(children=[subjectd, subjectNP,])
             final2 = self.LSTMcombine(children=[final, negobjectDP])
-            self.logits = tf.layers.dense(final2, 3,
+            true_final = self.combine([final2[0]], "final", reuse=False)
+            self.logits = tf.layers.dense(true_final, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
