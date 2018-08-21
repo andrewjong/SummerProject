@@ -105,7 +105,7 @@ class PIModel(object):
         else:
             h1, c1 = children[0]
             h2, c2 = children[1]
-        with rf.variable_scope("treeLSTM", reuse=True):
+        with tf.variable_scope("treeLSTM", reuse=True):
             Wi = tf.get_variable("LSTMWi")
             bi = tf.get_variable("LSTMbi")
             Wf=tf.get_variable("LSTMWf")
@@ -298,7 +298,7 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
         if self.model_type == "LSTMsepsimpcomp":
-            with rf.variable_scope("treeLSTM"):
+            with tf.variable_scope("treeLSTM"):
                 Wi = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWi")
                 bi = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name = "LSTMbi")
                 Wf = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWf")
