@@ -299,10 +299,10 @@ class PIModel(object):
                                           use_bias=True)
         if self.model_type == "LSTMsepsimpcomp":
             initer = tf.contrib.layers.xavier_initializer()
-            biniter = lambda x:tf.zeros(x) + 1e-3
+            biniter = tf.zeros_initializer
             with tf.variable_scope("treeLSTM"):
                 Wi = tf.get_variable( "LSTMWi", shape=[self.config.state_size,self.config.state_size], initializer=initer)
-                b = tf.get_variable("LSTMbi", shape=[1,self.config.state_size], initializer=biniter)
+                bi = tf.get_variable("LSTMbi", shape=[1,self.config.state_size], initializer=biniter)
                 Wf = tf.get_variable( "LSTMWf", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 bf = tf.get_variable("LSTMbf", shape=[1,self.config.state_size], initializer=biniter)
                 Wo = tf.get_variable( "LSTMWo", shape=[self.config.state_size,self.config.state_size], initializer=initer)
