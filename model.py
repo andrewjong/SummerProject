@@ -92,6 +92,47 @@ class PIModel(object):
         bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws2) + bs2
 
+    def LSTMcombine(self,children = None,input=None, size=None):
+        if size is None:
+            size = self.config.state_size
+        if input = None:
+            input = tf.constant(tf.zeros([1,self.config.state_size]))
+        if children = None:
+            h1 = tf.constant(tf.zeros([1,self.config.state_size]))
+            c1 = tf.constant(tf.zeros([1,self.config.state_size]))
+            h2 = tf.constant(tf.zeros([1,self.config.state_size]))
+            h2 = tf.constant(tf.zeros([1,self.config.state_size]))
+        else:
+            h1, c1 = children[0]
+            h2, c2 = children[1]
+        Wi = tf.get_variable("LSTMWi")
+        bi = tf.get_variable("LSTMbi")
+        Wf=tf.get_variable("LSTMWf")
+        bf=tf.get_variable("LSTMbf")
+        Wo=tf.get_variable("LSTMWo")
+        bo=tf.get_variable("LSTMbo")
+        Wu=tf.get_variable("LSTMWu")
+        bu=tf.get_variable("LSTMbu")
+        Ui1=tf.get_variable("LSTMUi1")
+        Ui2=tf.get_variable("LSTMUi2")
+        Uo1=tf.get_variable("LSTMUo1")
+        Uo2=tf.get_variable("LSTMUo2")
+        Uu1=tf.get_variable("LSTMUu1")
+        Uu2=tf.get_variable("LSTMUu2")
+        Uf11=tf.get_variable("LSTMUf11")
+        Uf12=tf.get_variable("LSTMUf12")
+        Uf21=tf.get_variable("LSTMUf21")
+        Uf22=tf.get_variable("LSTMUf22")
+        i = tf.nn.sigmoid(tf.matmul(input, Wi) + tf.matmul(h1, Ui1)+tf.matmul(h2, Ui2) + bi)
+        f1 = tf.nn.sigmoid(tf.matmul(input, Wf) + tf.matmul(h1, Uf11)+tf.matmul(h2, Uf12)+ bf)
+        f2 = tf.nn.sigmoid(tf.matmul(input, Wf) + tf.matmul(h1, Uf21)+tf.matmul(h2, Uf22)+ bf)
+        o = tf.nn.sigmoid(tf.matmul(input, Wo) + tf.matmul(h1, Uo1)+tf.matmul(h2, Uo1) + bo)
+        u = tf.nn.tanh(tf.matmul(input, Wu) + tf.matmul(h1, Uu1)+tf.matmul(h2, Uu1) + bu)
+        c = tf.multiply(i,u)+ + tf.multiply(f1, c1) + tf.multiply(f2,c2)
+        h =  tf.multiply(o,tf.nn.tanh(c))
+        return (h, c)
+
+
     def combine(self,stuff, name, reuse=True, size=None):
         if size is None:
             size = self.config.state_size
@@ -253,6 +294,64 @@ class PIModel(object):
             truefinal1 = self.combine([conj, final2], "comp")
             truefinal2 = self.combine([truefinal1,final22], "comp")
             self.logits = tf.layers.dense(truefinal2, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+        if self.model_type == "LSTMsepsimpcomp":
+            Wi = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWi")
+            bi = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name = "LSTMbi")
+            Wf = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWf")
+            bf = tf.Variable(tf.zeros([1,self.config.state_size]) + 1, name = "LSTMbf")
+            Wo = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWo")
+            bo = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name = "LSTMbo")
+            Wu = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMWu")
+            bu = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name = "LSTMbu")
+            Ui1 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUi1")
+            Ui2 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUi2")
+            Uo1 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUo1")
+            Uo2 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUo2")
+            Uu1 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUu1")
+            Uu2 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUu2")
+            Uf11 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMf11")
+            Uf12 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUf12")
+            Uf21 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUf21")
+            Uf22 = tf.Variable(initer([self.config.state_size,self.config.state_size]), name = "LSTMUf22")
+            psubjectd = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,0,:], [-1,300]))
+            psubjectn = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,1,:], [-1,300])
+            psubjecta = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,2,:], [-1,300])
+            pneg = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,4,:], [-1,300])
+            pverb = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,5,:], [-1,300])
+            padverb = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,6,:], [-1,300])
+            pobjectd = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,7,:], [-1,300])
+            pobjectn = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,8,:], [-1,300])
+            pobjecta = tf.LSTMcombine(input= tf.reshape(self.embed_prems[:,9,:], [-1,300])
+            psubjectNP = tf.LSTMcombine(children=[psubjecta, psubjectn])
+            pobjectNP = tf.LSTMcombine(children=[pobjecta, pobjectn])
+            pVP = tf.LSTMcombine(children=[padverb, pverb])
+            pobjectDP1 = tf.LSTMcombine(children=[pobjectd, pobjectNP])
+            pobjectDP2 = tf.LSTMcombine(children=[pobjectDP1, pVP])
+            pnegobjectDP = tf.LSTMcombine(children=[pneg, pobjectDP2])
+            pfinal = tf.LSTMcombine(children=[psubjectd, psubjectNP,])
+            pfinal2 = tf.LSTMcombine(children=[pfinal, pnegobjectDP])
+            hsubjectd = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,0,:], [-1,300])
+            hsubjectn = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,1,:], [-1,300])
+            hsubjecta = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,2,:], [-1,300])
+            hneg = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,4,:], [-1,300])
+            hverb = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,5,:], [-1,300])
+            hadverb = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,6,:], [-1,300])
+            hobjectd = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,7,:], [-1,300])
+            hobjectn = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,8,:], [-1,300])
+            hobjecta = tf.LSTMcombine(input= tf.reshape(self.embed_hyps[:,9,:], [-1,300])
+            hsubjectNP = tf.LSTMcombine(children=[hsubjecta, hsubjectn])
+            hobjectNP = tf.LSTMcombine(children=[hobjecta, hobjectn])
+            hVP = tf.LSTMcombine(children=[hadverb, hverb])
+            hobjectDP1 = tf.LSTMcombine(children=[hobjectd, hobjectNP])
+            hobjectDP2 = tf.LSTMcombine(children=[hobjectDP1, hVP])
+            hnegobjectDP = tf.LSTMcombine(children=[hneg, hobjectDP2])
+            hfinal = tf.LSTMcombine(children=[hsubjectd, hsubjectNP,])[0]
+            hfinal2 = tf.LSTMcombine(children=[hfinal, hnegobjectDP])[0]
+            final = self.combine([pfinal2, hfinal2], "final", reuse=False)
+            final2 = self.combine([final], "final2", reuse=False)
+            self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
