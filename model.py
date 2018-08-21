@@ -246,6 +246,7 @@ class PIModel(object):
             negobjectDP = self.combine([neg, objectDP2],"comp")
             final = self.combine([subjectd, subjectNP,],"comp")
             final2 = self.combine([final, negobjectDP],"comp")
+            finalrep = self.combine([final2],"final", reuse=False)
             self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
@@ -307,8 +308,8 @@ class PIModel(object):
             negobjectDP = self.LSTMcombine(children =[neg, objectDP2])
             final = self.LSTMcombine(children=[subjectd, subjectNP,])
             final2 = self.LSTMcombine(children=[final, negobjectDP])
-            true_final = self.combine([final2[0]], "final", reuse=False)
-            self.logits = tf.layers.dense(true_final, 3,
+            finalrep = self.combine([final2[0]],"final", reuse=False)
+            self.logits = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
@@ -356,7 +357,7 @@ class PIModel(object):
             conj = self.combine([tf.reshape(self.embed_prems[:,10,:], [-1,300]), tf.reshape(self.embed_hyps[:,10,:], [-1,300])],"comp")
             truefinal1 = self.combine([conj, final2], "comp")
             truefinal2 = self.combine([truefinal1,final22], "comp")
-            finalrep = self.combine([truefinal2], "final")
+            finalrep = self.combine([truefinal2], "final",reuse=False)
             self.logits = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
@@ -459,7 +460,8 @@ class PIModel(object):
             conj = self.LSTMcombine(children =[pconj,hconj])
             truefinal1 = self.LSTMcombine(input= [conj, final2])
             truefinal2 = self.LSTMcombine(input= [truefinal1,final22])
-            self.logits = tf.layers.dense(true_final, 3,
+            finalrep = self.combine([truefinal2], "final", reuse=False)
+            self.logits = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
@@ -520,7 +522,7 @@ class PIModel(object):
             hfinal = self.LSTMcombine(children=[hsubjectd, hsubjectNP,])
             hfinal2 = self.LSTMcombine(children=[hfinal, hnegobjectDP])
             final = self.combine([pfinal2[0], hfinal2[0]], "final", reuse=False)
-            final2 = self.combine([final], "final2", reuse=False)
+            finalrep = self.combine([final],"final2", reuse=False)
             self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
