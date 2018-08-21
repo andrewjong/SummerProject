@@ -96,12 +96,12 @@ class PIModel(object):
         if size is None:
             size = self.config.state_size
         if input == None:
-            input = tf.constant(tf.zeros([1,self.config.state_size]))
+            input = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
         if children == None:
-            h1 = tf.constant(tf.zeros([1,self.config.state_size]))
-            c1 = tf.constant(tf.zeros([1,self.config.state_size]))
-            h2 = tf.constant(tf.zeros([1,self.config.state_size]))
-            h2 = tf.constant(tf.zeros([1,self.config.state_size]))
+            h1 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
+            c1 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
+            h2 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
+            h2 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
         else:
             h1, c1 = children[0]
             h2, c2 = children[1]
