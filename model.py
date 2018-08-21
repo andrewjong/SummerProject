@@ -101,7 +101,7 @@ class PIModel(object):
             h1 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
             c1 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
             h2 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
-            h2 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
+            c2 = tf.Variable(tf.zeros([1,self.config.state_size]),trainable=False)
         else:
             h1, c1 = children[0]
             h2, c2 = children[1]
@@ -129,7 +129,7 @@ class PIModel(object):
         f2 = tf.nn.sigmoid(tf.matmul(input, Wf) + tf.matmul(h1, Uf21)+tf.matmul(h2, Uf22)+ bf)
         o = tf.nn.sigmoid(tf.matmul(input, Wo) + tf.matmul(h1, Uo1)+tf.matmul(h2, Uo1) + bo)
         u = tf.nn.tanh(tf.matmul(input, Wu) + tf.matmul(h1, Uu1)+tf.matmul(h2, Uu1) + bu)
-        c = tf.multiply(i,u)+ + tf.multiply(f1, c1) + tf.multiply(f2,c2)
+        c = tf.multiply(i,u) + tf.multiply(f1, c1) + tf.multiply(f2,c2)
         h =  tf.multiply(o,tf.nn.tanh(c))
         return (h, c)
 
@@ -351,9 +351,9 @@ class PIModel(object):
             hobjectDP1 = self.LSTMcombine(children=[hobjectd, hobjectNP])
             hobjectDP2 = self.LSTMcombine(children=[hobjectDP1, hVP])
             hnegobjectDP = self.LSTMcombine(children=[hneg, hobjectDP2])
-            hfinal = self.LSTMcombine(children=[hsubjectd, hsubjectNP,])[0]
-            hfinal2 = self.LSTMcombine(children=[hfinal, hnegobjectDP])[0]
-            final = self.combine([pfinal2, hfinal2], "final", reuse=False)
+            hfinal = self.LSTMcombine(children=[hsubjectd, hsubjectNP,])
+            hfinal2 = self.LSTMcombine(children=[hfinal, hnegobjectDP])
+            final = self.combine([pfinal2[0], hfinal2[0]], "final", reuse=False)
             final2 = self.combine([final], "final2", reuse=False)
             self.logits = tf.layers.dense(final2, 3,
                                           kernel_initializer=xavier,
