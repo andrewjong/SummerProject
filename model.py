@@ -315,7 +315,7 @@ class PIModel(object):
                 Uo2 = tf.get_variable( "LSTMUo2", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 Uu1 = tf.get_variable( "LSTMUu1", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 Uu2 = tf.get_variable( "LSTMUu2", shape=[self.config.state_size,self.config.state_size], initializer=initer)
-                Uf11 = tf.get_variable( "LSTMf11", shape=[self.config.state_size,self.config.state_size], initializer=initer)
+                Uf11 = tf.get_variable( "LSTMUf11", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 Uf12 = tf.get_variable( "LSTMUf12", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 Uf21 = tf.get_variable( "LSTMUf21", shape=[self.config.state_size,self.config.state_size], initializer=initer)
                 Uf22 = tf.get_variable( "LSTMUf22", shape=[self.config.state_size,self.config.state_size], initializer=initer)
