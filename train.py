@@ -38,10 +38,10 @@ def confuse(preds, labels):
     return matrix
 
 if __name__ == '__main__':
-    experiment = "experiment2_level21"
-    pretrained_embeddings = model_util.get_glove_vec("glove/glove.6B.300d.txt", vocab=model_util.get_vocab())
-    word_to_id = model_util.get_word_to_id("glove/glove.6B.300d.txt", vocab=model_util.get_vocab())
-    m = PIModel(config, pretrained_embeddings, "comp")
+    experiment = "experiment1_level2"
+    pretrained_embeddings = model_util.get_word_vec(vocab=model_util.get_vocab())
+    word_to_id = model_util.get_word_to_id(vocab=model_util.get_vocab())
+    m = PIModel(config, pretrained_embeddings, "siamese")
     labels = ['entails','contradicts','permits']
     cat_names = ['{}=>{}'.format(x,y) for x,y in itertools.product(labels,labels)]
     results = dict()
@@ -49,11 +49,11 @@ if __name__ == '__main__':
     print("Learning Rate:", config.lr)
     print("Dropout:", config.dropout)
     print("L2:", config.l2)
-    for lr in [0.001,0.001,0.001]:
-        for l2 in [0.0001,0.0001,0]:
+    for lr in [0.001]:
+        for l2 in [0]:
             for dropout in [1]:
                 for batch_size in [128]:
-                    for train_size in [2**i for i in [18]]:
+                    for train_size in [500000]:
                         config.lr = lr
                         config.l2 = l2
                         config.dropout = dropout

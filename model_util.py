@@ -62,7 +62,7 @@ def get_vocab():
                 vocab.append(word.lower())
     return vocab
 
-def get_word_to_id(glovepath, vocab):
+def get_word_to_id(vocab):
     word_to_id = dict()
     word_to_id["emptystring"] = 0
     word_to_id["notevery"] = 1
@@ -77,7 +77,7 @@ def get_id_to_word(glovepath, vocab):
         result[d[word]] = word
     return result
 
-def get_word_vec(glovepath, vocab):
+def get_word_vec(vocab):
     for word in vocab:
         mat.append([random.uniform(-1,1) for _ in range(100)])
     return np.array(mat, dtype=np.float32)
