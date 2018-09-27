@@ -8,8 +8,8 @@ import numpy as np
 from model import PIModel
 
 class config:
-    vocab_dim = 300
-    retrain_embeddings = False
+    vocab_dim = 100
+    retrain_embeddings = True
     attention = False
     max_prem_len = 22
     max_hyp_len = 22

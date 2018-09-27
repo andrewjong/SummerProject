@@ -77,18 +77,7 @@ def get_id_to_word(glovepath, vocab):
         result[d[word]] = word
     return result
 
-def get_glove_vec(glovepath, vocab):
-    all_words = dict()
-    with open(glovepath, "r", encoding="utf8") as f:
-        for line in f:
-            word = str(line.split()[0])
-            all_words[word] = [ float(number) for number in line.split()[1:]]
-    mat = []
-    mat.append([random.uniform(-1,1) for _ in range(300)])
-    mat.append([random.uniform(-1,1) for _ in range(300)])
+def get_word_vec(glovepath, vocab):
     for word in vocab:
-        if word in all_words:
-            mat.append(all_words[word])
-        else:
-            mat.append([random.uniform(-1,1) for _ in range(300)])
+        mat.append([random.uniform(-1,1) for _ in range(100)])
     return np.array(mat, dtype=np.float32)
