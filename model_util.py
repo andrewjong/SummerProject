@@ -53,7 +53,7 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
 
 def get_vocab():
     data, _, _ = gd.process_data(1.0)
-    vocab = ["does", "not", "any", "or", "and", "if", "then"]
+    vocab = ["does", "not", "any", "or", "and", "if", "then", "emptystring", "notevery"]
     for k in data:
         for word in data[k]:
             if type(word) == list:
@@ -64,10 +64,8 @@ def get_vocab():
 
 def get_word_to_id(vocab):
     word_to_id = dict()
-    word_to_id["emptystring"] = 0
-    word_to_id["notevery"] = 1
     for i, word in enumerate(vocab):
-        word_to_id[word] = i + 2
+        word_to_id[word] = i
     return word_to_id
 
 def get_id_to_word(glovepath, vocab):
@@ -78,6 +76,7 @@ def get_id_to_word(glovepath, vocab):
     return result
 
 def get_word_vec(vocab):
+    mat = []
     for word in vocab:
         mat.append([random.uniform(-1,1) for _ in range(100)])
     return np.array(mat, dtype=np.float32)

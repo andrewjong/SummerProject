@@ -6,6 +6,10 @@ class PIModel(object):
     def __init__(self, config, pretrained_embeddings, model_type):
         self.model_type = model_type
         self.config = config
+        if self.config.activationstring == "relu":
+            self.config.activation = tf.nn.relu
+        if self.config.activationstring == "tanh":
+            self.config.activation = tf.nn.tanh
         self.embeddings = tf.Variable(pretrained_embeddings, trainable=self.config.retrain_embeddings)
         self.add_placeholders()
         self.add_embeddings()
@@ -49,11 +53,11 @@ class PIModel(object):
         initer = tf.contrib.layers.xavier_initializer()
 
         with tf.variable_scope("prem"):
-            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, activation=self.config.activation), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems,\
                           sequence_length=self.prem_len_placeholder, dtype=tf.float32)
         with tf.variable_scope("hyp"):
-            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, activation=self.config.activation), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                          sequence_length=self.hyp_len_placeholder, initial_state=prem_out)
         hyp_out = hyp_out.h
@@ -84,10 +88,10 @@ class PIModel(object):
                 r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
             Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+            h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
         Ws1 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
         bs1 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
-        h = tf.tanh(tf.matmul(h, Ws1) + bs1)
+        h = self.config.activation(tf.matmul(h, Ws1) + bs1)
         Ws2 = tf.Variable(initer([self.config.state_size,3]))
         bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
         self.logits = tf.matmul(h, Ws2) + bs2
@@ -171,14 +175,14 @@ class PIModel(object):
             representation = tf.layers.dense(
                                             tf.concat([prem_out.h, hyp_out.h], 1),
                                             self.config.state_size,
-                                            activation=tf.nn.relu,
+                                            activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
                                             )
             representation2 = tf.layers.dense(
                                             representation,
                                             self.config.state_size,
-                                            activation=tf.nn.relu,
+                                            activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
                                             )
@@ -553,22 +557,22 @@ class PIModel(object):
             hobjectd = tf.reshape(self.embed_hyps[:,7,:], [-1,300])
             hobjectn = tf.reshape(self.embed_hyps[:,8,:], [-1,300])
             hobjecta = tf.reshape(self.embed_hyps[:,9,:], [-1,300])
-            hsubjectNP = self.combine([hsubjecta, hsubjectn],"comp2", reuse=False)
-            hobjectNP = self.combine([hobjecta, hobjectn],"comp2")
-            hVP = self.combine([hadverb, hverb],"comp2")
-            hobjectDP1 = self.combine([hobjectd, hobjectNP],"comp2")
-            hobjectDP2 = self.combine([hobjectDP1, hVP],"comp2")
-            hnegobjectDP = self.combine([hneg, hobjectDP2],"comp2")
-            halmostfinal = self.combine([hsubjectd, hsubjectNP,],"comp2")
-            hfinal = self.combine([halmostfinal, hnegobjectDP],"comp2")
+            hsubjectNP = self.combine([hsubjecta, hsubjectn],"comp")
+            hobjectNP = self.combine([hobjecta, hobjectn],"comp")
+            hVP = self.combine([hadverb, hverb],"comp")
+            hobjectDP1 = self.combine([hobjectd, hobjectNP],"comp")
+            hobjectDP2 = self.combine([hobjectDP1, hVP],"comp")
+            hnegobjectDP = self.combine([hneg, hobjectDP2],"comp")
+            halmostfinal = self.combine([hsubjectd, hsubjectNP,],"comp")
+            hfinal = self.combine([halmostfinal, hnegobjectDP],"comp")
             final = self.combine([pfinal, hfinal], "final", reuse=False)
             finalrep = self.combine([final], "final2", reuse=False)
-            premise_nodes = [psubjectd,psubjecta,psubjectn,pneg, padverb, pverb, pobjectd,pobjecta,pobjectn,psubjectNP, pobjectNP, pVP, pobjectDP1, pobjectDP2,pnegobjectDP, pfinal, pfinal2]
-            premise_nodes = [tf.expand_dims(x,1) for x in premise_nodes]
-            premise_nodes = tf.concat(premise_nodes,1)
-            hypothesis_nodes = [hsubjectd,hsubjecta,hsubjectn,hneg, hadverb, hverb, hobjectd,hobjecta,hobjectn,hsubjectNP, hobjectNP, hVP, hobjectDP1, hobjectDP2,hnegobjectDP, hfinal, hfinal2]
-            hypothesis_nodes = [tf.expand_dims(x,1) for x in hypothesis_nodes]
-            hypothesis_nodes = tf.concat(hypothesis_nodes,1)
+            #premise_nodes = [psubjectd,psubjecta,psubjectn,pneg, padverb, pverb, pobjectd,pobjecta,pobjectn,psubjectNP, pobjectNP, pVP, pobjectDP1, pobjectDP2,pnegobjectDP, pfinal, pfinal2]
+            #premise_nodes = [tf.expand_dims(x,1) for x in premise_nodes]
+            #premise_nodes = tf.concat(premise_nodes,1)
+            #hypothesis_nodes = [hsubjectd,hsubjecta,hsubjectn,hneg, hadverb, hverb, hobjectd,hobjecta,hobjectn,hsubjectNP, hobjectNP, hVP, hobjectDP1, hobjectDP2,hnegobjectDP, hfinal, hfinal2]
+            #hypothesis_nodes = [tf.expand_dims(x,1) for x in hypothesis_nodes]
+            #hypothesis_nodes = tf.concat(hypothesis_nodes,1)
             if self.config.attention == "wordbyword":
                 Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
                 Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
