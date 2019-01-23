@@ -1,4 +1,6 @@
 import json
+import copy
+import random
 from data_util import sentence
 
 def strong_composition(signature1, signature2, relation1, relation2):
@@ -311,3 +313,280 @@ def test_simple():
         if x["entails"][k] != 0:
             expression += str(x["entails"][k]) + "*" + basemod("50", "50", k[0]) + "*" + basemod("50", "50", k[1]) +"*" + basemod("50", "50", k[2]) + "+"
     print(expression, "\n\n")
+
+def create_gen_split():
+    dets1 = ["some", "every"]
+    dets2 = ["some", "every"]
+    negs1 = [True, False]
+    negs2 = [True, False]
+    subrels = ["entails", "reverse entails", "independence", "equivalence"]
+    verbrels = ["entails", "reverse entails", "independence", "equivalence"]
+    objrels = ["entails", "reverse entails", "independence", "equivalence"]
+    equiv_classes = dict()
+    for r in relations:
+        equiv_classes[r] = []
+    for det1 in dets1:
+        for neg1 in negs1:
+            for det2 in dets2:
+                for neg2 in negs2:
+                    for objrel in objrels:
+                        for verbrel in verbrels:
+                            object_negation_signature = negation_merge(neg1, neg2)
+                            object_determiner_signature = determiner_merge(det1, det2)
+                            object_DP_relation = determiner_phrase(object_determiner_signature, objrel, verbrel)
+                            object_NegDP_relation = negation_phrase(object_negation_signature, object_DP_relation)
+                            example = dict()
+                            if neg1:
+                                if det1 == "some":
+                                    example["premobjdet"] = "no"
+                                if det1 == "every":
+                                    example["premobjdet"] = "notevery"
+                            else:
+                                example["premobjdet"] = det1
+                            if neg2:
+                                if det2 == "some":
+                                    example["hypobjdet"] = "no"
+                                if det2 == "every":
+                                    example["hypobjdet"] = "notevery"
+                            else:
+                                example["hypobjdet"] = det2
+                            example["objmod"] = objrel
+                            example["verbmod"] = verbrel
+                            equiv_classes[object_NegDP_relation].append(example)
+    negation_equiv_classes = dict()
+    negation_equiv_classes["notnot"] = dict()
+    negation_equiv_classes["emptynot"] = dict()
+    negation_equiv_classes["notempty"] = dict()
+    negation_equiv_classes["emptyempty"] = dict()
+    for rel in equiv_classes:
+        num_examples = len(equiv_classes[rel])
+        print(rel, num_examples)
+        random.shuffle(equiv_classes[rel])
+        negation_equiv_classes["notnot"][rel] = equiv_classes[rel][0:int(num_examples/4)]
+        negation_equiv_classes["emptynot"][rel] = equiv_classes[rel][int(num_examples/4):int((2*num_examples)/4)]
+        negation_equiv_classes["notempty"][rel] = equiv_classes[rel][int((2*num_examples)/4):int((3*num_examples)/4)]
+        negation_equiv_classes["emptyempty"][rel] = equiv_classes[rel][int((3*num_examples)/4):]
+    equiv_classes = dict()
+    for r in relations:
+        equiv_classes[r] = []
+    for neg1 in negs1:
+        for neg2 in negs2:
+            for rel in relations:
+                negation_signature = negation_merge(neg1, neg2)
+                negverb_relation = negation_phrase(negation_signature, rel)
+                if neg1 and neg2:
+                    for example in negation_equiv_classes["notnot"][rel]:
+                        example["premnegation"] = neg1
+                        example["hypnegation"] = neg2
+                        equiv_classes[negverb_relation].append(example)
+                if neg1 and not neg2:
+                    for example in negation_equiv_classes["notempty"][rel]:
+                        example["premnegation"] = neg1
+                        example["hypnegation"] = neg2
+                        equiv_classes[negverb_relation].append(example)
+                if not neg1 and not neg2:
+                    for example in negation_equiv_classes["emptyempty"][rel]:
+                        example["premnegation"] = neg1
+                        example["hypnegation"] = neg2
+                        equiv_classes[negverb_relation].append(example)
+                if not neg1 and neg2:
+                    for example in negation_equiv_classes["emptynot"][rel]:
+                        example["premnegation"] = neg1
+                        example["hypnegation"] = neg2
+                        equiv_classes[negverb_relation].append(example)
+    det_equiv_classes = dict()
+    for det1 in dets1:
+        for neg1 in negs1:
+            for det2 in dets2:
+                for neg2 in negs2:
+                    for subrel in subrels:
+                        det_equiv_classes[(det1,neg1,det2,neg2,subrel)] = dict()
+    for rel in equiv_classes:
+        num_examples = len(equiv_classes[rel])
+        print(rel, num_examples)
+        i = 0
+        for neg2 in negs2:
+            for det1 in dets1:
+                for det2 in dets2:
+                    for subrel in subrels:
+                        for neg1 in negs1:
+                            if num_examples > 64:
+                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = equiv_classes[rel][int((i*num_examples)/64):int(((i+1)*num_examples)/64)]
+                            else:
+                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = [copy.copy(equiv_classes[rel][i%num_examples])]
+                                if i % num_examples == num_examples - 1:
+                                    random.shuffle(equiv_classes[rel])
+                            i += 1
+    final_result = []
+    for det1 in dets1:
+        for neg1 in negs1:
+            for det2 in dets2:
+                for neg2 in negs2:
+                    for subrel in subrels:
+                        for rel in relations:
+                            subject_negation_signature = negation_merge(neg1, neg2)
+                            subject_determiner_signature = determiner_merge(det1, det2)
+                            subject_DP_relation = determiner_phrase(subject_determiner_signature, subrel, rel)
+                            subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
+                            for example in det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel]:
+                                if neg1:
+                                    if det1 == "some":
+                                        example["premsubdet"] = "no"
+                                    if det1 == "every":
+                                        example["premsubdet"] = "notevery"
+                                else:
+                                    example["premsubdet"] = det1
+                                if neg2:
+                                    if det2 == "some":
+                                        example["hypsubdet"] = "no"
+                                    if det2 == "every":
+                                        example["hypsubdet"] = "notevery"
+                                else:
+                                    example["hypsubdet"] = det2
+                                example["submod"] = subrel
+                                example["extra"] = subject_NegDP_relation
+                                final_result.append(example)
+    total = len(final_result)
+    print(total)
+    dets1 = ["some", "every", "no","notevery"]
+    dets2 = ["some", "every", "no","notevery"]
+    verbfix = dict()
+    i = 0
+    options = [1,2,3,4,5]
+    random.shuffle(options)
+    for det1 in dets1:
+        for det2 in dets2:
+            for objrel in objrels:
+                verbfix[(det1,det2,objrel)] = options[i%5]
+                if i%5 == 4:
+                    random.shuffle(options)
+                i+= 1
+    objfix = dict()
+    i = 0
+    random.shuffle(options)
+    for det1 in dets1:
+        for det2 in dets2:
+            for verbrel in verbrels:
+                objfix[(det1,det2,verbrel)] = options[i%5]
+                if i%5 == 4:
+                    random.shuffle(options)
+                i += 1
+    subfix = dict()
+    i = 0
+    random.shuffle(options)
+    for det1 in dets1:
+        for det2 in dets2:
+            for rel in relations:
+                subfix[(det1,det2,rel)] = options[i%5]
+                if i%5 == 4:
+                    random.shuffle(options)
+                i += 1
+    for i in range(total):
+        if final_result[i]["objmod"] == "independence":
+            type = objfix[(final_result[i]["premobjdet"], final_result[i]["hypobjdet"], final_result[i]["verbmod"])]
+            if type == 1:
+                final_result[i]["objmod"] = "entails"
+                final_result[i]["obj"] = "independence"
+            if type == 2:
+                final_result[i]["objmod"] = "reverse entails"
+                final_result[i]["obj"] = "independence"
+            if type == 3:
+                final_result[i]["objmod"] = "equivalence"
+                final_result[i]["obj"] = "independence"
+            if type == 4:
+                final_result[i]["obj"] = "independence"
+            if type == 5:
+                final_result[i]["obj"] = "equivalence"
+        else:
+            final_result[i]["obj"] = "equivalence"
+        if final_result[i]["verbmod"] == "independence":
+            type = verbfix[(final_result[i]["premobjdet"], final_result[i]["hypobjdet"], final_result[i]["objmod"])]
+            if type == 1:
+                final_result[i]["verbmod"] = "entails"
+                final_result[i]["verb"] = "independence"
+            if type == 2:
+                final_result[i]["verbmod"] = "reverse entails"
+                final_result[i]["verb"] = "independence"
+            if type == 3:
+                final_result[i]["verbmod"] = "equivalence"
+                final_result[i]["verb"] = "independence"
+            if type == 4:
+                final_result[i]["verb"] = "independence"
+            if type == 5:
+                final_result[i]["verb"] = "equivalence"
+        else:
+            final_result[i]["verb"] = "equivalence"
+        if final_result[i]["submod"] == "independence":
+            type = subfix[(final_result[i]["premsubdet"], final_result[i]["hypsubdet"], final_result[i]["extra"])]
+            if type == 1:
+                final_result[i]["submod"] = "entails"
+                final_result[i]["sub"] = "independence"
+            if type == 2:
+                final_result[i]["submod"] = "reverse entails"
+                final_result[i]["sub"] = "independence"
+            if type == 3:
+                final_result[i]["submod"] = "equivalence"
+                final_result[i]["sub"] = "independence"
+            if type == 4:
+                final_result[i]["sub"] = "independence"
+            if type == 5:
+                final_result[i]["sub"] = "equivalence"
+        else:
+            final_result[i]["sub"] = "equivalence"
+        final_result[i].pop("extra", None)
+    final_encodings = set()
+    for example in final_result:
+        encoding = []
+        dets = ["every", "notevery", "some", "no"]
+        if example["premnegation"]:
+            encoding.append(1)
+        else:
+            encoding.append(0)
+        encoding += [dets.index(example["premsubdet"]),dets.index(example["premobjdet"])]
+        if example["hypnegation"]:
+            encoding.append(1)
+        else:
+            encoding.append(0)
+        encoding += [dets.index(example["hypsubdet"]),dets.index(example["hypobjdet"])]
+        if example["submod"] == "equivalence":
+            encoding.append(0)
+        if example["submod"] == "reverse entails":
+            encoding.append(1)
+        if example["submod"] == "entails":
+            encoding.append(2)
+        if example["submod"] == "independence":
+            encoding.append(3)
+        if example["objmod"] == "equivalence":
+            encoding.append(0)
+        if example["objmod"] == "reverse entails":
+            encoding.append(1)
+        if example["objmod"] == "entails":
+            encoding.append(2)
+        if example["objmod"] == "independence":
+            encoding.append(3)
+        if example["verbmod"] == "equivalence":
+            encoding.append(0)
+        if example["verbmod"] == "reverse entails":
+            encoding.append(1)
+        if example["verbmod"] == "entails":
+            encoding.append(2)
+        if example["verbmod"] == "independence":
+            encoding.append(3)
+        if example["sub"] == "equivalence":
+            encoding.append(1)
+        else:
+            encoding.append(0)
+        if example["verb"] == "equivalence":
+            encoding.append(1)
+        else:
+            encoding.append(0)
+        if example["obj"] == "equivalence":
+            encoding.append(1)
+        else:
+            encoding.append(0)
+        if len(encoding) != 12:
+            print("oh fuck")
+        final_encodings.add(json.dumps(encoding))
+    print(total, 16*4*4*4*4*16)
+    return final_encodings
+create_gen_split()
