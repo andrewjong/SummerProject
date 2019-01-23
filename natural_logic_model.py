@@ -200,6 +200,47 @@ def compute_simple_relation(premise, hypothesis):
     subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
     return subject_NegDP_relation
 
+def compute_simple_relation_gentest(premise, hypothesis, relations_seen=None):
+    #computes the relation between a premise and hypothesis simple sentence
+    #leaves
+    if relations_seen == None:
+        relations_seen = dict()
+        relations_seen["subNP"] = set()
+        relations_seen["objNP"] = set()
+        relations_seen["VP"] = set()
+        relations_seen["objDP"] = set()
+        relations_seen["negobjDP"] = set()
+        relations_seen["subDP"] = set()
+
+    subject_negation_signature = negation_merge(premise.subject_negation, hypothesis.subject_negation)
+    subject_determiner_signature = determiner_merge(premise.natlog_subject_determiner, hypothesis.natlog_subject_determiner)
+    subject_noun_relation = standard_lexical_merge(premise.subject_noun,hypothesis.subject_noun)
+    subject_adjective_relation = standard_lexical_merge(premise.subject_adjective,hypothesis.subject_adjective)
+    relations_seen["subNP"].add((subject_noun_relation,subject_adjective_relation))
+    verb_negation_signature = negation_merge(premise.verb_negation, hypothesis.verb_negation)
+    verb_relation = standard_lexical_merge(premise.verb,hypothesis.verb)
+    adverb_relation = standard_lexical_merge(premise.adverb,hypothesis.adverb)
+    relations_seen["VP"].add((verb_relation,adverb_relation))
+    object_negation_signature = negation_merge(premise.object_negation, hypothesis.object_negation)
+    object_determiner_signature = determiner_merge(premise.natlog_object_determiner, hypothesis.natlog_object_determiner)
+    object_noun_relation = standard_lexical_merge(premise.object_noun,hypothesis.object_noun)
+    object_adjective_relation = standard_lexical_merge(premise.object_adjective,hypothesis.object_adjective)
+    relations_seen["objNP"].add((object_noun_relation,object_adjective_relation))
+
+    #the nodes of the tree
+    VP_relation = standard_phrase(adverb_relation, verb_relation)
+    object_NP_relation = standard_phrase(object_adjective_relation, object_noun_relation)
+    subject_NP_relation = standard_phrase(subject_adjective_relation, subject_noun_relation)
+    object_DP_relation = determiner_phrase(object_determiner_signature, object_NP_relation, VP_relation)
+    relations_seen["objDP"].add((premise.object_determiner, hypothesis.object_determiner, object_NP_relation, VP_relation))
+    object_negDP_relation = negation_phrase(object_negation_signature, object_DP_relation)
+    negverb_relation = negation_phrase(verb_negation_signature, object_negDP_relation)
+    relations_seen["negobjDP"].add((premise.verb_negation, hypothesis.verb_negation, object_negDP_relation))
+    subject_DP_relation = determiner_phrase(subject_determiner_signature, subject_NP_relation, negverb_relation)
+    subject_NegDP_relation = negation_phrase(subject_negation_signature, subject_DP_relation)
+    relations_seen["subDP"].add((premise.subject_determiner, hypothesis.subject_determiner, subject_NP_relation, negverb_relation))
+    return subject_NegDP_relation, relations_seen
+
 def conjunction_to_negation(conjunction):
     if conjunction == "or":
         return False,False,False
@@ -589,4 +630,3 @@ def create_gen_split():
         final_encodings.add(json.dumps(encoding))
     print(total, 16*4*4*4*4*16)
     return final_encodings
-create_gen_split()
