@@ -690,8 +690,8 @@ class PIModel(object):
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, tvars), self.config.max_grad_norm)
         self.train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-    def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, dropout,label_batch, lr, l2):
-        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2, lr, label_batch)
+    def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch):
+        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, self.config.dropout, self.config.l2_norm, self.config.learning_rate, label_batch)
         output_feed = [self.train_op, self.logits, self.loss]
         _, logits, loss = sess.run(output_feed, input_feed)
         return np.argmax(logits, axis=1), loss
@@ -702,7 +702,7 @@ class PIModel(object):
         logits, loss = sess.run(output_feed, input_feed)
         return np.argmax(logits, axis=1), loss
 
-    def run_train_epoch(self, sess, dataset, lr, dropout, l2):
+    def run_train_epoch(self, sess, dataset):
         print(np.sum([np.product([xi.value for xi in x.get_shape()]) for x in tf.trainable_variables()]))
         preds = []
         labels = []
@@ -710,7 +710,7 @@ class PIModel(object):
         x = 0
         count = 0
         for prem, prem_len, hyp, hyp_len, label in dataset:
-            pred, loss = self.optimize(sess, prem, prem_len, hyp, hyp_len, dropout, label, lr, l2)
+            pred, loss = self.optimize(sess, prem, prem_len, hyp, hyp_len,label)
             preds.extend(pred)
             labels.extend(label)
             losses += loss * len(label)

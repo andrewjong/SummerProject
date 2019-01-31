@@ -349,47 +349,163 @@ def level0_example_count(data, encoding):
         count *= (subject_adjective_size + 1)^2 - 3* subject_adjective_size - 1
     return count
 
-def level2_example_count(data, encoding):
-    count = 1
-    if encoding[-1] == 1:
-        if encoding[-5] == 0:
-            count *= 5
-        elif encoding[-5] == 1 or encoding[-5] == 2:
-            count *= 5
-    if encoding[-2] == 1:
-        if encoding[-4] == 0:
-            count *= 5
-        elif encoding[-4] == 1 or encoding[-4] == 2:
-            count *= 5
-    if encoding[-3] == 1:
-        if encoding[-6] == 0:
-            count *= 5
-        elif encoding[-6] == 1 or encoding[-6] == 2:
-            count *= 5
-    return count
-
-def get_simple_encoding_counts(data, level, ekeys, ckeys, pkeys):
+def level2_example_counts(data, ekeys,ckeys,pkeys):
+    weights = np.zeros((4,4,4))
+    for encoding in ekeys:
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z] +=1
+    for encoding in ckeys:
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z] +=1
+    for encoding in pkeys:
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z] +=1
+    print("hey")
     ecounts = []
     ccounts = []
     pcounts = []
     for encoding in ekeys:
         encoding = json.loads(encoding)
-        if level == "level 0":
-            ecounts.append(level0_example_count(data,encoding))
+        if encoding[-1] == 1:
+            x = encoding[-5]
         else:
-            ecounts.append(level2_example_count(data,encoding))
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        ecounts.append(np.sum(weights)/weights[x,y,z])
     for encoding in ckeys:
         encoding = json.loads(encoding)
-        if level == "level 0":
-            ccounts.append(level0_example_count(data,encoding))
+        if encoding[-1] == 1:
+            x = encoding[-5]
         else:
-            ccounts.append(level2_example_count(data,encoding))
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        ccounts.append(np.sum(weights)/weights[x,y,z])
     for encoding in pkeys:
         encoding = json.loads(encoding)
-        if level == "level 0":
-            pcounts.append(level0_example_count(data,encoding))
+        if encoding[-1] == 1:
+            x = encoding[-5]
         else:
-            pcounts.append(level2_example_count(data,encoding))
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        pcounts.append(np.sum(weights)/weights[x,y,z])
+    weights = np.zeros((4,4,4))
+    for i, encoding in enumerate(ekeys):
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z]+=ecounts[i]
+    for i, encoding in enumerate(ckeys):
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z]+=ccounts[i]
+    for i,encoding in enumerate(pkeys):
+        encoding = json.loads(encoding)
+        if encoding[-1] == 1:
+            x = encoding[-5]
+        else:
+            x = 3
+        if encoding[-2] == 1:
+            y = encoding[-4]
+        else:
+            y = 3
+        if encoding[-3] == 1:
+            z = encoding[-6]
+        else:
+            z = 3
+        weights[x,y,z]+=pcounts[i]
+    print("hey")
+    for i in range(4):
+        for j in range(4):
+            for k in range(4):
+                print(weights[x,y,z])
+    return ecounts, ccounts, pcounts
+
+def get_simple_encoding_counts(data, level, ekeys, ckeys, pkeys):
+    ecounts = []
+    ccounts = []
+    pcounts = []
+    if level == "level 0":
+        ecounts, ccounts, pcounts = level0_example_count(data, ekeys,ckeys,pkeys)
+    else:
+        ecounts, ccounts, pcounts= level2_example_counts(data, ekeys,ckeys,pkeys)
     gcd = gcd_n(ecounts)
     ecounts = [ecount/gcd for ecount in ecounts]
     gcd = gcd_n(ccounts)
@@ -454,8 +570,13 @@ def create_corpus(size, filename):
     save_data(examples, filename)
 
 data, _, _ = process_data(1.0)
-restrictions = nlm.create_gen_split()
-examples = generate_balanced_data("simple_solutions", "boolean_solutions", 60000, 0, data, simple_sampling = "level 1", boolean_sampling = "level 0",restrictions = restrictions)
+restrictions, inverse_restrictions = nlm.create_gen_split()
+examples = generate_balanced_data("simple_solutions", "boolean_solutions", 50, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
+save_data(examples, "dummy.train")
+examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+save_data(examples, "dummy.val")
+examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+save_data(examples, "dummy.test")
 premise = parse_simple_sentence(data,examples[0][0])[0]
 hypothesis = parse_simple_sentence(data,examples[0][2])[0]
 _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis)
