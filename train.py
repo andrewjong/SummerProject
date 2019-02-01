@@ -60,7 +60,8 @@ def hyperparameter_search(models,  data_path, learning_rates, l2_norms, dropouts
                                         results_folder = ""
                                         for param in params:
                                             results_folder += param
-                                        os.mkdir(results_folder)
+                                        if not os.path.exists(results_folder):
+                                            os.mkdir(results_folder)
                                         hypaccs= []
                                         results = []
                                         best_val = 0
@@ -71,14 +72,14 @@ def hyperparameter_search(models,  data_path, learning_rates, l2_norms, dropouts
                                             ### Call training and validation routine
                                             ### This part runs one epoch of trainin#g and one epoch of validation
                                             ### Outcomes: preds, labels, constr, loss
-                                            train_data = model_util.get_feed(os.path.join(data_path+  ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len,num_iter=int(500000/config.batch_size), shuffle = True)
+                                            train_data = model_util.get_feed(os.path.join(data_path+  ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, shuffle = True)
                                             for prem, prem_len, hyp, hyp_len, label in train_data:
-                                                pred, _ = m.optimize(sess, prem, prem_len, hyp, hyp_len, label)
+                                                _, _= m.optimize(sess, prem, prem_len, hyp, hyp_len, label)
                                                 count += 1
                                                 if count*config.batch_size % 100000 < config.batch_size:
                                                     val_data = model_util.get_feed(os.path.join(data_path +".val"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len)
                                                     preds_val, labels_val, _= m.run_test_epoch(sess, val_data)
-                                                    train_data2 = model_util.get_feed(os.path.join(data_path+ ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, num_iter=int(min(train_size,10000)/config.batch_size), shuffle = False)
+                                                    train_data2 = model_util.get_feed(os.path.join(data_path+ ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, num_iter=int(10000/config.batch_size), shuffle = False)
                                                     preds_train2, labels_train2, _= m.run_test_epoch(sess, train_data2)
                                                     results.append((ratio(preds_train2, labels_train2), ratio(preds_val, labels_val),ratio(preds_test, labels_test), confuse(preds_train2, labels_train2), confuse(preds_val, labels_val),confuse(preds_test, labels_test)))
                                                     if ratio(preds_val, labels_val) > best_val:

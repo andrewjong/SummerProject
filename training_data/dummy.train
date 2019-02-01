@@ -1,48 +1,9 @@
-{"sentence1": "some sheltered3 singer3 eternally wins3 every elephant", "sentence2": "not every sheltered3 singer3 does not win3 every valuable2 elephant", "gold_label": "entails"}
-{"sentence1": "every warrior wildly shoots3 every Israeli2 bag3", "sentence2": "no vivacious3 warrior shoots3 every Israeli2 bag3", "gold_label": "contradicts"}
-{"sentence1": "no coy3 pianist2 does not abruptly burn3 not every Minnesotan spoon3", "sentence2": "no coy3 pianist2 does not abruptly paint3 every Mexican cup3", "gold_label": "permits"}
-{"sentence1": "no Lithuanian3 whistler2 poorly3 warms2 some cyan3 rifle3", "sentence2": "some whistler2 does not poorly3 bless every rifle3", "gold_label": "permits"}
-{"sentence1": "every proud gnome3 remembers no bongo", "sentence2": "not every proud gnome3 does not brightly remember not every orange2 bongo", "gold_label": "entails"}
-{"sentence1": "no Siberian3 zombie2 does not helpfully3 beat3 no monitor3", "sentence2": "no Siberian3 zombie2 helpfully3 beats3 every brown monitor3", "gold_label": "entails"}
-{"sentence1": "every shaman2 hears3 no chartreuse3 helmet", "sentence2": "some unhinged2 shaman2 does not warmly2 hear3 every chartreuse3 helmet", "gold_label": "entails"}
-{"sentence1": "some unhelpful3 undertaker does not thoughtfully3 burn not every pan3", "sentence2": "some undertaker burns every worthless3 pan3", "gold_label": "entails"}
-{"sentence1": "every sheriff2 does not doubtfully2 dry2 no Californian2 pot3", "sentence2": "no Polish3 sheriff2 doubtfully2 dries2 some Californian2 pot3", "gold_label": "contradicts"}
-{"sentence1": "no vivacious gymnast3 does not fortunately3 bring3 some valuable lemur2", "sentence2": "no gymnast3 does not fortunately3 bring3 no valuable lemur2", "gold_label": "contradicts"}
-{"sentence1": "every trumpeter helpfully3 describes3 every English3 notebook2", "sentence2": "no Alabaman trumpeter describes3 every English3 notebook2", "gold_label": "contradicts"}
-{"sentence1": "some Israeli3 skater3 hopelessly2 approves2 every chameleon3", "sentence2": "not every Israeli3 skater3 does not approve2 every dry2 chameleon3", "gold_label": "entails"}
-{"sentence1": "not every Texan3 zombie3 does not paint2 no hard3 cup", "sentence2": "not every Texan3 zombie3 does not wildly paint2 every cup", "gold_label": "permits"}
-{"sentence1": "every director marks no English3 lion3", "sentence2": "some underwhelming director does not gleefully3 mark every English3 lion3", "gold_label": "entails"}
-{"sentence1": "not every unhinged3 flautist2 imagines3 every golden2 harp2", "sentence2": "not every unhinged3 flautist2 does not lamely imagine3 not every harp2", "gold_label": "entails"}
-{"sentence1": "some firefighter2 adoringly approves3 every small mug3", "sentence2": "not every insane3 slave2 does not adoringly approve3 no mug3", "gold_label": "permits"}
-{"sentence1": "some knight does not borrow2 some keyboard3", "sentence2": "some Pakistani knight frequently3 borrows2 some silver keyboard3", "gold_label": "permits"}
-{"sentence1": "no Canadian prostitute does not wickedly sniff some horrid3 log2", "sentence2": "not every prostitute sniffs no horrid3 log2", "gold_label": "entails"}
-{"sentence1": "not every Indian slave3 cheerfully2 locates2 not every Austrian3 log3", "sentence2": "every slave3 does not locate2 every Austrian3 log3", "gold_label": "contradicts"}
-{"sentence1": "not every outstanding philosopher3 does not solemnly3 bleach2 not every harpsichord3", "sentence2": "some Polish2 firefighter3 solemnly3 bleaches2 some valuable3 harpsichord3", "gold_label": "permits"}
-{"sentence1": "some English2 drinker3 angrily emphasizes3 no Macedonian3 chameleon3", "sentence2": "no sheltered drinker3 does not angrily emphasize3 no Macedonian3 chameleon3", "gold_label": "permits"}
-{"sentence1": "every small astrologist does not wholeheartedly face2 no quaint2 pen3", "sentence2": "no small astrologist faces2 some valuable handgun3", "gold_label": "permits"}
-{"sentence1": "no Pakistani3 clerk faithfully3 sells2 not every Moroccan knife3", "sentence2": "not every Pakistani3 clerk does not sell2 some knife3", "gold_label": "entails"}
-{"sentence1": "every angry3 slave slaps3 no cap", "sentence2": "not every angry3 slave does not miserably3 slap3 not every Israeli3 cap", "gold_label": "entails"}
-{"sentence1": "every charismatic2 cop3 does not crazily emphasize no Iraqi bucket2", "sentence2": "some charismatic2 cop3 does not emphasize some Iraqi bucket2", "gold_label": "contradicts"}
-{"sentence1": "some Swiss astrologist2 softly3 checks2 not every Romanian3 pillow3", "sentence2": "some Swiss astrologist2 does not softly3 check2 every Romanian3 pillow3", "gold_label": "entails"}
-{"sentence1": "no talkative director does not sneakily2 vandalize3 not every copper3 underwear3", "sentence2": "no talkative director does not sneakily2 borrow3 every Mongolian3 car3", "gold_label": "permits"}
-{"sentence1": "some lucky2 boxer3 stains3 not every Alaskan2 tractor3", "sentence2": "every lucky2 boxer3 does not wearily2 stain3 not every Alaskan2 tractor3", "gold_label": "contradicts"}
-{"sentence1": "not every Mexican3 chef2 wildly2 warms3 not every elephant2", "sentence2": "no polite chef2 wildly2 warms3 no yellow elephant2", "gold_label": "permits"}
-{"sentence1": "every loud2 warrior does not carry every worthless3 clock", "sentence2": "not every loud2 warrior expertly inspects3 no clock", "gold_label": "permits"}
-{"sentence1": "every beautiful3 victim2 does not jealously claim2 some deformed3 sofa3", "sentence2": "not every victim2 jealously claims2 every sofa3", "gold_label": "entails"}
-{"sentence1": "every flautist randomly2 salts every Japanese2 pig3", "sentence2": "not every surly2 flautist salts no Japanese2 pig3", "gold_label": "entails"}
-{"sentence1": "no sheriff does not briskly2 appreciate2 some chartreuse baseball", "sentence2": "some polite sheriff does not briskly2 appreciate2 some chartreuse baseball", "gold_label": "contradicts"}
-{"sentence1": "every sniper3 does not innocently bless3 no maroon3 chair3", "sentence2": "not every wild3 pianist3 bombs not every chair3", "gold_label": "permits"}
-{"sentence1": "every ventriloquist2 presents no rhino2", "sentence2": "every Alaskan ventriloquist2 fortunately2 presents no Alaskan rhino2", "gold_label": "entails"}
-{"sentence1": "not every Polish3 convict3 returns3 every German pipe3", "sentence2": "not every Polish3 convict3 does not awkwardly2 return3 not every pipe3", "gold_label": "entails"}
-{"sentence1": "every zombie3 zestfully3 bathes2 every nickel2 panther3", "sentence2": "no taciturn zombie3 bathes2 every nickel2 panther3", "gold_label": "contradicts"}
-{"sentence1": "not every scaly drinker3 does not burn2 not every Sudanese3 racket", "sentence2": "no scaly drinker3 overconfidently2 beats every racket", "gold_label": "permits"}
-{"sentence1": "not every thoughtful psychologist does not carefully2 hug2 not every Minnesotan2 rat3", "sentence2": "not every thoughtful psychologist carefully2 hugs2 not every white2 rat3", "gold_label": "permits"}
-{"sentence1": "every Washingtonian3 salesman does not blindly2 twist2 not every sofa", "sentence2": "every Washingtonian3 salesman does not twist2 some red sofa", "gold_label": "contradicts"}
-{"sentence1": "no taciturn smith2 does not cheerfully puncture3 some magenta oboe", "sentence2": "every smith2 does not cheerfully puncture3 some magenta oboe", "gold_label": "contradicts"}
-{"sentence1": "no wild3 garbageman2 does not freeze no indigo3 viola", "sentence2": "no garbageman2 does not victoriously3 freeze every viola", "gold_label": "contradicts"}
-{"sentence1": "some soft3 clown3 willfully3 claims every tin straw2", "sentence2": "some soft3 clown3 willfully3 claims not every tin straw2", "gold_label": "permits"}
-{"sentence1": "not every soft skater3 brightly approves2 no Macedonian knife2", "sentence2": "no skater3 does not brightly approve2 no knife2", "gold_label": "contradicts"}
-{"sentence1": "not every Lithuanian3 milkman kookily identifies2 no Swiss2 mirror", "sentence2": "no milkman does not kookily identify2 no mirror", "gold_label": "contradicts"}
-{"sentence1": "not every beautiful3 driver3 does not victoriously3 draw no Oklahoman2 glove", "sentence2": "not every driver3 victoriously3 draws some Oklahoman2 sword3", "gold_label": "permits"}
-{"sentence1": "no proud3 drinker2 does not idolize no Chilean2 fork", "sentence2": "no drinker2 does not innocently2 idolize every fork", "gold_label": "contradicts"}
-{"sentence1": "every pilot3 victoriously covers2 every sock2", "sentence2": "some ugly pilot3 victoriously covers2 no Alaskan3 sock2", "gold_label": "contradicts"}
+{"sentence1": "some insane2 senator3 does not kookily2 stain notevery Siberian3 panther3", "sentence2": "some insane2 senator3 does not emptystring stain no Siberian3 panther3", "gold_label": "entails"}
+{"sentence1": "some crazy biologist2 emptystring emptystring curiously2 kicks2 no worthless pig3", "sentence2": "some crazy biologist2 does not emptystring kick2 notevery worthless pig3", "gold_label": "permits"}
+{"sentence1": "no emptystring traitor2 emptystring emptystring mysteriously2 fancies no indigo vape", "sentence2": "some charismatic3 traitor2 emptystring emptystring mysteriously2 fancies no indigo vape", "gold_label": "contradicts"}
+{"sentence1": "every surly2 baker emptystring emptystring lazily3 describes notevery dry rifle", "sentence2": "some emptystring baker does not lazily3 describe notevery dry rifle", "gold_label": "permits"}
+{"sentence1": "some Latvian2 clockmaker emptystring emptystring justly2 forgets3 some florid3 harp", "sentence2": "notevery Latvian2 clockmaker does not emptystring forget3 some florid3 harp", "gold_label": "entails"}
+{"sentence1": "no silly3 slave3 does not overconfidently3 approve3 some azure2 basketball2", "sentence2": "every silly3 slave3 does not overconfidently3 approve3 no azure2 basketball2", "gold_label": "entails"}
+{"sentence1": "some noble2 sniper3 does not emptystring squash some emptystring helmet3", "sentence2": "no emptystring sniper3 does not softly3 squash every mustard helmet3", "gold_label": "contradicts"}
+{"sentence1": "no unpredictable3 Brit2 emptystring emptystring lamely3 fears some emptystring sofa3", "sentence2": "notevery unpredictable3 Brit2 does not lamely3 fear some translucent3 sofa3", "gold_label": "contradicts"}
+{"sentence1": "no Lithuanian2 guitarist3 does not emptystring choose no periwinkle2 laptop3", "sentence2": "notevery emptystring guitarist3 does not vivaciously choose some emptystring laptop3", "gold_label": "permits"}

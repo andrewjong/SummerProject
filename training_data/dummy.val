@@ -1,9 +1,9 @@
-{"sentence1": "not every Canadian3 cop2 does not lamely3 appraise some Californian2 basketball", "sentence2": "not every cop2 lamely3 appraises no basketball", "gold_label": "entails"}
-{"sentence1": "every trumpeter3 bleaches2 no pen3", "sentence2": "not every big3 trumpeter3 does not cheerfully3 bleach2 every brown pen3", "gold_label": "contradicts"}
-{"sentence1": "some vampire3 bombs3 not every Spanish keyboard2", "sentence2": "not every unhinged3 vampire3 justly2 bombs3 every Spanish keyboard2", "gold_label": "permits"}
-{"sentence1": "no doorman does not squash2 no English2 crown", "sentence2": "not every big doorman taciturnly squashes2 not every English2 crown", "gold_label": "contradicts"}
-{"sentence1": "every robber eternally reddens3 not every azure3 harp2", "sentence2": "not every Texan2 robber does not eternally redden3 every harp2", "gold_label": "contradicts"}
-{"sentence1": "every sailor3 does not receive every platinum2 baseball2", "sentence2": "some Mexican2 sailor3 does not obnoxiously hug3 not every baseball2", "gold_label": "permits"}
-{"sentence1": "no Alaskan3 hunter poorly hugs2 every pink2 knife2", "sentence2": "not every hunter poorly hugs2 every knife2", "gold_label": "entails"}
-{"sentence1": "not every seductive racist does not dutifully2 name2 no Appalachian3 harpsichord", "sentence2": "every racist does not name2 not every Appalachian3 harpsichord", "gold_label": "permits"}
-{"sentence1": "no underwhelming2 shaman does not borrow no periwinkle pen2", "sentence2": "some shaman cheerfully borrows no periwinkle pen2", "gold_label": "entails"}
+{"sentence1": "no unpredictable3 playwright3 emptystring emptystring emptystring detests every translucent rose", "sentence2": "no unpredictable3 playwright3 emptystring emptystring tediously detests notevery emptystring rose", "gold_label": "contradicts"}
+{"sentence1": "some polite philosopher2 does not weakly send3 some quaint3 marble", "sentence2": "notevery emptystring philosopher2 does not weakly send3 notevery emptystring marble", "gold_label": "entails"}
+{"sentence1": "some charismatic3 queen3 does not perkily3 stain2 every Pakistani2 chair3", "sentence2": "every charismatic3 director2 emptystring emptystring perkily3 bleaches3 every emptystring chair3", "gold_label": "permits"}
+{"sentence1": "every ugly3 psychic3 emptystring emptystring emptystring sends2 no lavender spoon", "sentence2": "no ugly3 psychic3 emptystring emptystring valiantly sends2 every emptystring piano3", "gold_label": "permits"}
+{"sentence1": "no emptystring teacher3 does not emptystring carry2 no emptystring bongo", "sentence2": "every sheltered teacher3 does not perkily2 carry2 no Latvian2 bongo", "gold_label": "contradicts"}
+{"sentence1": "notevery uncouth3 whistler2 emptystring emptystring bravely3 dusts notevery emptystring baseball3", "sentence2": "notevery emptystring whistler2 emptystring emptystring emptystring dusts notevery Polish baseball3", "gold_label": "entails"}
+{"sentence1": "some Israeli3 linguist2 emptystring emptystring emptystring faces3 notevery smelly iguana", "sentence2": "notevery emptystring linguist2 emptystring emptystring predictably faces3 every emptystring iguana", "gold_label": "entails"}
+{"sentence1": "some emptystring biologist3 emptystring emptystring emptystring kisses some emptystring saxophone", "sentence2": "some chummy2 biologist3 emptystring emptystring delightfully2 kisses every white2 football2", "gold_label": "permits"}
+{"sentence1": "no smooth3 philosopher emptystring emptystring justly shows2 some pretty pipe2", "sentence2": "no smooth3 philosopher emptystring emptystring justly shows2 no pretty pipe2", "gold_label": "contradicts"}

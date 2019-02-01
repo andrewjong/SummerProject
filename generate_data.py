@@ -542,15 +542,15 @@ def generate_balanced_data(simple_filename, boolean_filename, simple_size, boole
     for i in range(label_size):
         encoding = json.loads(weighted_selection(ekeys, ecounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "entails", hypothesis.string))
+        examples.append((premise.emptystring, "entails", hypothesis.emptystring))
     for i in range(label_size):
         encoding = json.loads(weighted_selection(ckeys, ccounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "contradicts", hypothesis.string))
+        examples.append((premise.emptystring, "contradicts", hypothesis.emptystring))
     for i in range(label_size):
         encoding = json.loads(weighted_selection(pkeys, pcounts))
         premise, hypothesis = encoding_to_example(data,encoding)
-        examples.append((premise.string, "permits", hypothesis.string))
+        examples.append((premise.emptystring, "permits", hypothesis.emptystring))
     bool_label_size = int(boolean_size/3)
     bool_e,bool_c,bool_p = split_dict(boolean_filename, None)
     bool_ekeys = list(bool_e.keys())
@@ -568,9 +568,15 @@ def create_corpus(size, filename):
     data, _, _ = process_data(1.0)
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
     save_data(examples, filename)
-if True:
+if False:
     data, _, _ = process_data(1.0)
     restrictions, inverse_restrictions = nlm.create_gen_split()
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
+    save_data(examples, "dummy.train")
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+    save_data(examples, "dummy.val")
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+    save_data(examples, "dummy.test")
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", 500000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
     save_data(examples, "gendata.train")
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)

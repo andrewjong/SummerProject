@@ -35,10 +35,12 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
                 hypotheses.append(sentence_to_id(hyp, word_to_id, max_hypothesis_length))
                 hypothesis_lengths.append(len(hyp.split()))
             else:
-                premises.append(sentence_to_id(du.parse_sentence(data,example["sentence1"])[0].emptystring, word_to_id, max_premise_length))
-                premise_lengths.append(len(du.parse_sentence(data,example["sentence1"])[0].emptystring.split()))
-                hypotheses.append(sentence_to_id(du.parse_sentence(data,example["sentence2"])[0].emptystring, word_to_id, max_hypothesis_length))
-                hypothesis_lengths.append(len(du.parse_sentence(data,example["sentence2"])[0].emptystring.split()))
+                sentence1 = example["sentence1"]
+                sentence2 = example["sentence2"]
+                premises.append(sentence_to_id(sentence1, word_to_id, max_premise_length))
+                premise_lengths.append(len(sentence1.split()))
+                hypotheses.append(sentence_to_id(sentence2, word_to_id, max_hypothesis_length))
+                hypothesis_lengths.append(len(sentence2.split()))
             labels.append(label_to_num(example["gold_label"]))
             if num_iter is not None and len(labels) > num_iter*batch_size:
                 break
