@@ -1,0 +1,9 @@
+{"sentence1": "not every Canadian3 cop2 does not lamely3 appraise some Californian2 basketball", "sentence2": "not every cop2 lamely3 appraises no basketball", "gold_label": "entails"}
+{"sentence1": "every trumpeter3 bleaches2 no pen3", "sentence2": "not every big3 trumpeter3 does not cheerfully3 bleach2 every brown pen3", "gold_label": "contradicts"}
+{"sentence1": "some vampire3 bombs3 not every Spanish keyboard2", "sentence2": "not every unhinged3 vampire3 justly2 bombs3 every Spanish keyboard2", "gold_label": "permits"}
+{"sentence1": "no doorman does not squash2 no English2 crown", "sentence2": "not every big doorman taciturnly squashes2 not every English2 crown", "gold_label": "contradicts"}
+{"sentence1": "every robber eternally reddens3 not every azure3 harp2", "sentence2": "not every Texan2 robber does not eternally redden3 every harp2", "gold_label": "contradicts"}
+{"sentence1": "every sailor3 does not receive every platinum2 baseball2", "sentence2": "some Mexican2 sailor3 does not obnoxiously hug3 not every baseball2", "gold_label": "permits"}
+{"sentence1": "no Alaskan3 hunter poorly hugs2 every pink2 knife2", "sentence2": "not every hunter poorly hugs2 every knife2", "gold_label": "entails"}
+{"sentence1": "not every seductive racist does not dutifully2 name2 no Appalachian3 harpsichord", "sentence2": "every racist does not name2 not every Appalachian3 harpsichord", "gold_label": "permits"}
+{"sentence1": "no underwhelming2 shaman does not borrow no periwinkle pen2", "sentence2": "some shaman cheerfully borrows no periwinkle pen2", "gold_label": "entails"}

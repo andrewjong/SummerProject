@@ -568,21 +568,21 @@ def create_corpus(size, filename):
     data, _, _ = process_data(1.0)
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
     save_data(examples, filename)
-
-data, _, _ = process_data(1.0)
-restrictions, inverse_restrictions = nlm.create_gen_split()
-examples = generate_balanced_data("simple_solutions", "boolean_solutions", 50, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
-save_data(examples, "dummy.train")
-examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
-save_data(examples, "dummy.val")
-examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
-save_data(examples, "dummy.test")
-premise = parse_simple_sentence(data,examples[0][0])[0]
-hypothesis = parse_simple_sentence(data,examples[0][2])[0]
-_, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis)
-for example in examples:
-    premise = parse_simple_sentence(data,example[0])[0]
-    hypothesis = parse_simple_sentence(data,example[2])[0]
-    _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis, relations_seen)
-for k in relations_seen:
-    print(k, len(relations_seen[k]))
+if True:
+    data, _, _ = process_data(1.0)
+    restrictions, inverse_restrictions = nlm.create_gen_split()
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 500000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
+    save_data(examples, "gendata.train")
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+    save_data(examples, "gendata.val")
+    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+    save_data(examples, "gendata.test")
+    premise = parse_simple_sentence(data,examples[0][0])[0]
+    hypothesis = parse_simple_sentence(data,examples[0][2])[0]
+    _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis)
+    for example in examples:
+        premise = parse_simple_sentence(data,example[0])[0]
+        hypothesis = parse_simple_sentence(data,example[2])[0]
+        _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis, relations_seen)
+    for k in relations_seen:
+        print(k, len(relations_seen[k]))
