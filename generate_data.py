@@ -568,7 +568,7 @@ def create_corpus(size, filename):
     data, _, _ = process_data(1.0)
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
     save_data(examples, filename)
-if True:
+if False:
     data, _, _ = process_data(1.0)
     restrictions, inverse_restrictions = nlm.create_gen_split()
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", 500000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)

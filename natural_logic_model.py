@@ -515,6 +515,7 @@ def create_gen_split():
     subfix = dict()
     i = 0
     random.shuffle(options)
+    spread = {"permits":0, "contradicts":0, "entails":0}
     for det1 in dets1:
         for det2 in dets2:
             for rel in relations:
@@ -574,9 +575,12 @@ def create_gen_split():
                 final_result[i]["sub"] = "equivalence"
         else:
             final_result[i]["sub"] = "equivalence"
-        final_result[i].pop("extra", None)
+        spread[get_label(final_result[i].pop("extra", None))] += 1
     final_encodings = set()
+    easycount = 0
     for example in final_result:
+        if example["verb"] == "independence" or example["verbmod"] == "independence" or example["sub"] == "independence" or example["submod"] == "independence" or example["obj"] == "independence" or example["objmod"] == "independence":
+            easycount +=1
         encoding = []
         dets = ["every", "notevery", "some", "no"]
         if example["premnegation"]:
@@ -629,4 +633,21 @@ def create_gen_split():
             print("oh fuck")
         final_encodings.add(json.dumps(encoding))
     print(total, 16*4*4*4*4*16)
-    return final_encodings
+    print(spread, easycount)
+    inverse_encodings = set()
+    for a in range(2):
+        for b in range(4):
+            for c in range(4):
+                for d in range(2):
+                    for e in range(4):
+                        for f in range(4):
+                            for g in range(4):
+                                for h in range(4):
+                                    for i in range(4):
+                                        for j in range(2):
+                                            for k in range(2):
+                                                for l in range(2):
+                                                    if json.dumps([a,b,c,d,e,f,g,h,i,j,k,l]) not in final_encodings:
+                                                        inverse_encodings.add(json.dumps([a,b,c,d,e,f,g,h,i,j,k,l]))
+    print(len(inverse_encodings), len(final_encodings))
+    return final_encodings, inverse_encodings
