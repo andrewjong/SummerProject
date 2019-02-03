@@ -57,7 +57,7 @@ def hyperparameter_search(models,  data_path, learning_rates, l2_norms, dropouts
                                     if not os.path.exists(os.path.join(model+attention,results_folder)):
                                         os.mkdir(os.path.join(model+attention,results_folder))
                                     best_val, best_test, accs = train_model(model, attention, data_path,os.path.join(model+attention,results_folder), learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch)
-                                    hyp_results[results_folder] = (best_val, best_test)
+                                    hyp_results[results_folder] = (best_val, best_test, accs)
         bestscore = 0
         bestparams = None
         for k in hyp_results:

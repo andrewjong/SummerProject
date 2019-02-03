@@ -11,7 +11,7 @@ def sentence_to_id(sentence, word_to_id, max_len):
     return ret + [1] * (max_len -len(ret))
 
 def label_to_num(l):
-    d = {'entails':0, 'contradicts':1, 'permits':2}
+    d = {'entailment':0, 'contradiction':1, 'neutral':2}
     return d[l]
 
 def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_length, num_iter = None, shuffle = False):
