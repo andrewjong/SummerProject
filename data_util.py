@@ -17,15 +17,11 @@ class sentence:
         self.adverb = adverb
         self.subject_adjective = subject_adjective
         self.object_adjective = object_adjective
-        self.verb_index = 0#ensures a non-negated verb is conjugated for first person present
+        self.verb_index = 2#ensures a non-negated verb is conjugated for first person present
         if negate:
             self.negation = "does not"
-            self.verb_index = 2#ensures a verb following negation is in bare form
         self.string = self.construct_string([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
-        if self.negation == "":
-            self.emptystring = self.construct_emptystring([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,"",self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
-        else:
-            self.emptystring = self.construct_emptystring([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
+        self.emptystring = self.construct_emptystring([self.subject_determiner,self.subject_adjective,self.subject_noun,self.negation,self.adverb,self.verb[self.verb_index],self.string_object_determiner,self.object_adjective,self.object_noun])
         self.construct_logical_form_joint_predicates()
         self.initialize_natlog()
 
@@ -75,6 +71,8 @@ class sentence:
         for word in lst:
             if word == "not every":
                 result += "notevery" + " "
+            elif word == "does not":
+                result += "doesnot" + " "
             elif word != "":
                 result += word + " "
             else:
@@ -156,28 +154,28 @@ def parse_compound_sentence(data, input_sentence):
         return [parse_simple_sentence(data, input_sentence[:input_sentence.index(" and ")])[0],"and", parse_simple_sentence(data,input_sentence[input_sentence.index(" and ")+5:])[0]]
 
 def verify_parse(data, subject_noun, verb, object_noun, negation, adverb, subject_adjective, object_adjective, subject_determiner, object_determiner):
-    if subject_noun not in data["agents"]:
+    if subject_noun not in data["agents"] + ["emptystring"]:
         print("Subject noun is invalid")
         return False
-    if object_noun not in data["things"]:
+    if object_noun not in data["things"]+ ["emptystring"]:
         print("Object noun is invalid")
         return False
-    if verb not in data["transitive_verbs"]:
+    if verb not in data["transitive_verbs"]+ ["emptystring"]:
         print("Verb is invalid")
         return False
-    if subject_adjective not in data["subject_adjectives"] + [""]:
+    if subject_adjective not in data["subject_adjectives"] + [""]+ ["emptystring"]:
         print("Subject adjective is invalid")
         return False
-    if object_adjective not in data["object_adjectives"] + [""]:
+    if object_adjective not in data["object_adjectives"] + [""]+ ["emptystring"]:
         print("Object adjective is invalid")
         return False
-    if adverb not in data["adverbs"] + [""]:
+    if adverb not in data["adverbs"] + [""]+ ["emptystring"]:
         print("Adverb is invalid")
         return False
-    if subject_determiner not in ["not every", "no", "some", "every", "any"]:
+    if subject_determiner not in ["notevery", "no", "some", "every", "any"]:
         print("Subject determiner is invalid")
         return False
-    if object_determiner not in ["not every", "no", "some", "every", "any"]:
+    if object_determiner not in ["notevery", "no", "some", "every", "any"]:
         print("Object determiner is invalid")
         return False
     return True
@@ -186,52 +184,48 @@ def parse_simple_sentence(data, input_sentence):
     #Takes a simple input_sentence and outputs the corresponding
     #instance of the sentence class
     words = input_sentence.split()
-    if words[0] == "not":
-        subject_determiner = "not every"
-        words = words[2:]
-    else:
-        subject_determiner = words[0]
+    subject_determiner = words[0]
+    words = words[1:]
+    if words[0] == "emptystring":
+        subject_adjective = ""
         words = words[1:]
-    if words[0] in data["subject_adjectives"]:
+    else:
         subject_adjective = words[0]
         words = words[1:]
-    else:
-        subject_adjective = ""
     subject_noun = words[0]
     words = words[1:]
-    if words[0] == "does" and words[1] == "not":
+    if words[0] == "doesnot":
         negation = True
-        words = words[2:]
-    else:
-        negation = False
-    if words[0] in data["adverbs"]:
-        adverb = words[0]
         words = words[1:]
     else:
+        negation = False
+        words = words[1:]
+    if words[0] == "emptystring":
         adverb = ""
+        words = words[1:]
+    else:
+        adverb = words[0]
+        words = words[1:]
     verb = ""
     for verb_list in data["transitive_verbs"]:
         if words[0] in verb_list:
             verb = verb_list
     words = words[1:]
-    if words[0] == "not":
-        object_determiner = "not every"
-        words = words[2:]
-    else:
-        object_determiner = words[0]
+    object_determiner = words[0]
+    words = words[1:]
+    if words[0] == "emptystring":
+        object_adjective = ""
         words = words[1:]
-    if words[0] in data["object_adjectives"]:
+    else:
         object_adjective = words[0]
         words = words[1:]
-    else:
-        object_adjective = ""
     object_noun = words[0]
-    if object_determiner == "any":
-        object_determiner = "no"
-    if subject_determiner == "any":
-        subject_determiner = "no"
     if not verify_parse(data, subject_noun, verb, object_noun, negation, adverb, subject_adjective, object_adjective, subject_determiner, object_determiner):
         return None
+    if object_determiner == "notevery":
+        object_determiner = "not every"
+    if subject_determiner == "notevery":
+        subject_determiner = "not every"
     return [sentence(subject_noun, verb, object_noun, negation, adverb, subject_adjective, object_adjective, subject_determiner, object_determiner)]
 
 def parse_sentence(data, sentence):

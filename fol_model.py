@@ -16,10 +16,10 @@ def get_label(premise, hypothesis):
     hypothesis_logical_form = Expression.fromstring(hypothesis.logical_form)
     negated_hypothesis_logical_form = Expression.fromstring("-" + "(" + hypothesis.logical_form + ")")
     if prover.prove(hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
-        return "entails"
+        return "entailment"
     if prover.prove(negated_hypothesis_logical_form, [premise_logical_form, premise_assumptions,hypothesis_assumptions]):
-        return "contradicts"
-    return "permits"
+        return "contradiction"
+    return "neutral"
 
 def build_simple_file(name):
     #This function builds a dictionary with encoded simple sentence NLI inputs
@@ -98,7 +98,7 @@ def build_simple_file(name):
             for j in range(2):
                 for k in range(2):
                     if i != 1 or j != 1 or k != 1:
-                        result[json.dumps(final_encoding + [i,j,k])] = "permits"
+                        result[json.dumps(final_encoding + [i,j,k])] = "neutral"
     with open(name, "w") as f:
         f.write(json.dumps(result))
 
@@ -142,11 +142,11 @@ def build_boolean_file(name):
                         assumptions.append(Expression.fromstring("B(constant)|D(constant)"))
                     label = None
                     if prover.prove(Expression.fromstring(conclusion), assumptions):
-                        label = "entails"
+                        label = "entailment"
                     elif prover.prove(Expression.fromstring("-"+conclusion), assumptions):
-                        label = "contradicts"
+                        label = "contradiction"
                     else:
-                        label = "permits"
+                        label = "neutral"
                     result[json.dumps((pindex, hindex, first_relation, second_relation))] = label
     with open(name,"w") as f:
         f.write(json.dumps(result))

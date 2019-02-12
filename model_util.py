@@ -55,7 +55,7 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
 
 def get_vocab():
     data, _, _ = gd.process_data(1.0)
-    vocab = ["does", "not", "any", "or", "and", "if", "then", "emptystring", "notevery"]
+    vocab = ["doesnot", "any", "or", "and", "if", "then", "emptystring", "notevery"]
     for k in data:
         for word in data[k]:
             if type(word) == list:

@@ -1,9 +1,9 @@
-{"sentence1": "some kooky clerk emptystring emptystring doubtfully mistreats notevery cyan spork", "sentence2": "some kooky clerk emptystring emptystring emptystring mistreats notevery cyan log", "gold_label": "permits"}
-{"sentence1": "every angry physicist does not briskly brush some lavender lemur", "sentence2": "some angry physicist emptystring emptystring briskly brushes notevery emptystring lemur", "gold_label": "entails"}
-{"sentence1": "no sneaky traitor does not crazily bless no Oklahoman eraser", "sentence2": "notevery sneaky traitor does not crazily bless every emptystring eraser", "gold_label": "contradicts"}
-{"sentence1": "no French physicist emptystring emptystring emptystring mistreats every Swiss glove", "sentence2": "some emptystring chef does not abruptly mistreat no emptystring glove", "gold_label": "permits"}
-{"sentence1": "notevery emptystring baker emptystring emptystring stylishly buries notevery sturdy phone", "sentence2": "some fuzzy baker does not spontaneously vandalize no sturdy rhino", "gold_label": "permits"}
-{"sentence1": "no rough optimist does not emptystring return no emptystring tulip", "sentence2": "no emptystring optimist emptystring emptystring gleefully returns no Sudanese tulip", "gold_label": "contradicts"}
-{"sentence1": "no savvy waitress emptystring emptystring obnoxiously collects notevery English tractor", "sentence2": "some savvy waitress does not emptystring collect no English tractor", "gold_label": "entails"}
-{"sentence1": "every emptystring plumber does not occasionally locate no Alaskan bench", "sentence2": "notevery stupid plumber emptystring emptystring occasionally locates no Alaskan bench", "gold_label": "entails"}
-{"sentence1": "notevery Oklahoman nomad does not emptystring dry no emptystring bag", "sentence2": "no emptystring nomad emptystring emptystring kookily dries notevery Ghanaian bag", "gold_label": "contradicts"}
+{"sentence1": "some kooky clerk emptystring doubtfully mistreats notevery cyan spork", "sentence2": "some kooky clerk emptystring emptystring mistreats notevery cyan log", "gold_label": "neutral"}
+{"sentence1": "every angry physicist doesnot briskly brush some lavender lemur", "sentence2": "some angry physicist emptystring briskly brushes notevery emptystring lemur", "gold_label": "entailment"}
+{"sentence1": "no sneaky traitor doesnot crazily bless no Oklahoman eraser", "sentence2": "notevery sneaky traitor doesnot crazily bless every emptystring eraser", "gold_label": "contradiction"}
+{"sentence1": "no French physicist emptystring emptystring mistreats every Swiss glove", "sentence2": "some emptystring chef doesnot abruptly mistreat no emptystring glove", "gold_label": "neutral"}
+{"sentence1": "notevery emptystring baker emptystring stylishly buries notevery sturdy phone", "sentence2": "some fuzzy baker doesnot spontaneously vandalize no sturdy rhino", "gold_label": "neutral"}
+{"sentence1": "no rough optimist doesnot emptystring return no emptystring tulip", "sentence2": "no emptystring optimist emptystring gleefully returns no Sudanese tulip", "gold_label": "contradiction"}
+{"sentence1": "no savvy waitress emptystring obnoxiously collects notevery English tractor", "sentence2": "some savvy waitress doesnot emptystring collect no English tractor", "gold_label": "entailment"}
+{"sentence1": "every emptystring plumber doesnot occasionally locate no Alaskan bench", "sentence2": "notevery stupid plumber emptystring occasionally locates no Alaskan bench", "gold_label": "entailment"}
+{"sentence1": "notevery Oklahoman nomad doesnot emptystring dry no emptystring bag", "sentence2": "no emptystring nomad emptystring kookily dries notevery Ghanaian bag", "gold_label": "contradiction"}

@@ -1,9 +1,9 @@
-{"sentence1": "notevery devout wizard emptystring emptystring emptystring guards some emptystring trident", "sentence2": "some emptystring wizard emptystring emptystring justly guards notevery Texan trident", "gold_label": "entails"}
-{"sentence1": "every Mongolian warrior does not wearily bury notevery Panamanian log", "sentence2": "every Mongolian warrior does not emptystring bury some emptystring log", "gold_label": "contradicts"}
-{"sentence1": "notevery emptystring percussionist does not occasionally bring some tin tuba", "sentence2": "no Mississippian percussionist emptystring emptystring occasionally brings notevery emptystring tuba", "gold_label": "permits"}
-{"sentence1": "every emptystring percussionist emptystring emptystring warmly hears every Iraqi vape", "sentence2": "some Spanish percussionist does not warmly hear some Iraqi vape", "gold_label": "contradicts"}
-{"sentence1": "no Swiss skater does not emptystring describe no smelly harpsichord", "sentence2": "no Swiss skater does not smoothly describe notevery smelly harpsichord", "gold_label": "entails"}
-{"sentence1": "some Pakistani sexist emptystring emptystring happily describes some Mongolian eraser", "sentence2": "no Pakistani sexist emptystring emptystring happily describes some Mongolian eraser", "gold_label": "contradicts"}
-{"sentence1": "some emptystring gynecologist does not roughly fancy every golden car", "sentence2": "notevery Nebraskan gynecologist does not emptystring fancy some emptystring car", "gold_label": "permits"}
-{"sentence1": "every emptystring actor does not deftly burn every maroon pipe", "sentence2": "some thoughtful actor does not deftly burn every maroon pipe", "gold_label": "entails"}
-{"sentence1": "no Columbian gnome emptystring emptystring emptystring sells some Sudanese fox", "sentence2": "no Columbian gnome does not fortunately sell notevery emptystring chameleon", "gold_label": "permits"}
+{"sentence1": "notevery devout wizard emptystring emptystring guards some emptystring trident", "sentence2": "some emptystring wizard emptystring justly guards notevery Texan trident", "gold_label": "entailment"}
+{"sentence1": "every Mongolian warrior doesnot wearily bury notevery Panamanian log", "sentence2": "every Mongolian warrior doesnot emptystring bury some emptystring log", "gold_label": "contradiction"}
+{"sentence1": "notevery emptystring percussionist doesnot occasionally bring some tin tuba", "sentence2": "no Mississippian percussionist emptystring occasionally brings notevery emptystring tuba", "gold_label": "neutral"}
+{"sentence1": "every emptystring percussionist emptystring warmly hears every Iraqi vape", "sentence2": "some Spanish percussionist doesnot warmly hear some Iraqi vape", "gold_label": "contradiction"}
+{"sentence1": "no Swiss skater doesnot emptystring describe no smelly harpsichord", "sentence2": "no Swiss skater doesnot smoothly describe notevery smelly harpsichord", "gold_label": "entailment"}
+{"sentence1": "some Pakistani sexist emptystring happily describes some Mongolian eraser", "sentence2": "no Pakistani sexist emptystring happily describes some Mongolian eraser", "gold_label": "contradiction"}
+{"sentence1": "some emptystring gynecologist doesnot roughly fancy every golden car", "sentence2": "notevery Nebraskan gynecologist doesnot emptystring fancy some emptystring car", "gold_label": "neutral"}
+{"sentence1": "every emptystring actor doesnot deftly burn every maroon pipe", "sentence2": "some thoughtful actor doesnot deftly burn every maroon pipe", "gold_label": "entailment"}
+{"sentence1": "no Columbian gnome emptystring emptystring sells some Sudanese fox", "sentence2": "no Columbian gnome doesnot fortunately sell notevery emptystring chameleon", "gold_label": "neutral"}

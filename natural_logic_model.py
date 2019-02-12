@@ -168,11 +168,11 @@ def conjunction_phrase(conjunction_signature, relation1, relation2):
 def get_label(relation):
     #converts MacCartney's relations to 3 class NLI labels
     if relation in ["cover", "independence", "reverse entails"]:
-        return "permits"
+        return "neutral"
     if relation in ["entails", "equivalence"]:
-        return "entails"
+        return "entailment"
     if relation in ["alternation", "contradiction"]:
-        return "contradicts"
+        return "contradiction"
 
 def compute_simple_relation(premise, hypothesis):
     #computes the relation between a premise and hypothesis simple sentence
@@ -297,9 +297,9 @@ def test_simple():
         for r2 in relations2:
             for c1 in ["or", "and", "then"]:
                 for c2 in ["or", "and", "then"]:
-                    if r == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "permits" and (get_label(compute_boolean_relation_test("entails", r2,c1,c2)) != "permits" or get_label(compute_boolean_relation_test("alternation", r2,c1,c2)) != "permits" or get_label(compute_boolean_relation_test("reverse entails", r2,c1,c2)) != "permits"):
+                    if r == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "neutral" and (get_label(compute_boolean_relation_test("entails", r2,c1,c2)) != "neutral" or get_label(compute_boolean_relation_test("alternation", r2,c1,c2)) != "neutral" or get_label(compute_boolean_relation_test("reverse entails", r2,c1,c2)) != "neutral"):
                         badbools.append((conjs.index(c1),conjs.index(c2),placerelations.index(r),placerelations.index(r2)))
-                    if r2 == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "permits" and (get_label(compute_boolean_relation_test(r,"entails", c1,c2)) != "permits" or get_label(compute_boolean_relation_test(r,"alternation", c1,c2)) != "permits" or get_label(compute_boolean_relation_test(r,"reverse entails", c1,c2)) != "permits"):
+                    if r2 == "independence" and get_label(compute_boolean_relation_test(r, r2,c1,c2)) == "neutral" and (get_label(compute_boolean_relation_test(r,"entails", c1,c2)) != "neutral" or get_label(compute_boolean_relation_test(r,"alternation", c1,c2)) != "neutral" or get_label(compute_boolean_relation_test(r,"reverse entails", c1,c2)) != "neutral"):
                         badbools.append((conjs.index(c1),conjs.index(c2),placerelations.index(r),placerelations.index(r2)))
     print(badbools)
     for x in badbools:
@@ -307,7 +307,7 @@ def test_simple():
 
 
 
-    x = {"permits":dict(), "contradicts":dict(), "entails":dict()}
+    x = {"neutral":dict(), "contradiction":dict(), "entailment":dict()}
     for k in x:
         for VP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
             for object_NP_relation in ["equivalence", "entails", "reverse entails", "independence"]:
@@ -329,10 +329,10 @@ def test_simple():
                                     x[get_label(subject_NegDP_relation)][(VP_relation, object_NP_relation, subject_NP_relation)] +=1
     count = 0
     count2 = 0
-    for k in x["permits"]:
+    for k in x["neutral"]:
         if k[0] != "independence" and k[1] != "independence" and k[2] != "independence":
-            count += x["permits"][k]
-        count2 += x["permits"][k]
+            count += x["neutral"][k]
+        count2 += x["neutral"][k]
     print(count,count2,count/count2)
     expression = ""
     for k in x["entails"]:
@@ -345,9 +345,9 @@ def test_simple():
             expression += str(x["contradicts"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
     print(expression, "\n\n")
     expression = ""
-    for k in x["permits"]:
-        if x["permits"][k] != 0:
-            expression += str(x["permits"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
+    for k in x["neutral"]:
+        if x["neutral"][k] != 0:
+            expression += str(x["neutral"][k]) + "*" + basemod("v", "r", k[0]) + "*" + basemod("o", "b", k[1]) +"*" + basemod("s", "a", k[2]) + "+"
     print(expression, "\n\n")
     expression = ""
     for k in x["entails"]:
@@ -355,7 +355,7 @@ def test_simple():
             expression += str(x["entails"][k]) + "*" + basemod("50", "50", k[0]) + "*" + basemod("50", "50", k[1]) +"*" + basemod("50", "50", k[2]) + "+"
     print(expression, "\n\n")
 
-def create_gen_split():
+def create_gen_split(bigratio):
     dets1 = ["some", "every"]
     dets2 = ["some", "every"]
     negs1 = [True, False]
@@ -400,13 +400,19 @@ def create_gen_split():
     negation_equiv_classes["notempty"] = dict()
     negation_equiv_classes["emptyempty"] = dict()
     for rel in equiv_classes:
-        num_examples = len(equiv_classes[rel])
-        print(rel, num_examples)
         random.shuffle(equiv_classes[rel])
-        negation_equiv_classes["notnot"][rel] = equiv_classes[rel][0:int(num_examples/4)]
-        negation_equiv_classes["emptynot"][rel] = equiv_classes[rel][int(num_examples/4):int((2*num_examples)/4)]
-        negation_equiv_classes["notempty"][rel] = equiv_classes[rel][int((2*num_examples)/4):int((3*num_examples)/4)]
-        negation_equiv_classes["emptyempty"][rel] = equiv_classes[rel][int((3*num_examples)/4):]
+        shared = equiv_classes[rel][0:int(len(equiv_classes[rel])*bigratio)]
+        notshared = equiv_classes[rel][int(len(equiv_classes[rel])*bigratio):]
+        num_examples = len(notshared)
+        print(rel, num_examples)
+        negation_equiv_classes["notnot"][rel] = copy.deepcopy(notshared[0:int(num_examples/4)])
+        negation_equiv_classes["emptynot"][rel] = copy.deepcopy(notshared[int(num_examples/4):int((2*num_examples)/4)])
+        negation_equiv_classes["notempty"][rel] = copy.deepcopy(notshared[int((2*num_examples)/4):int((3*num_examples)/4)])
+        negation_equiv_classes["emptyempty"][rel] = copy.deepcopy(notshared[int((3*num_examples)/4):])
+        negation_equiv_classes["notnot"][rel] += copy.deepcopy(shared)
+        negation_equiv_classes["emptynot"][rel] += copy.deepcopy(shared)
+        negation_equiv_classes["notempty"][rel] += copy.deepcopy(shared)
+        negation_equiv_classes["emptyempty"][rel] += copy.deepcopy(shared)
     equiv_classes = dict()
     for r in relations:
         equiv_classes[r] = []
@@ -443,21 +449,25 @@ def create_gen_split():
                     for subrel in subrels:
                         det_equiv_classes[(det1,neg1,det2,neg2,subrel)] = dict()
     for rel in equiv_classes:
-        num_examples = len(equiv_classes[rel])
-        print(rel, num_examples)
         i = 0
+        random.shuffle(equiv_classes[rel])
+        shared = equiv_classes[rel][0:int(len(equiv_classes[rel])*bigratio)]
+        notshared = equiv_classes[rel][int(len(equiv_classes[rel])*bigratio):]
+        num_examples = len(notshared)
+        print(rel, num_examples)
         for neg2 in negs2:
             for det1 in dets1:
                 for det2 in dets2:
                     for subrel in subrels:
                         for neg1 in negs1:
                             if num_examples > 64:
-                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = equiv_classes[rel][int((i*num_examples)/64):int(((i+1)*num_examples)/64)]
+                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = copy.deepcopy(notshared[int((i*num_examples)/64):int(((i+1)*num_examples)/64)])
                             else:
-                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = [copy.copy(equiv_classes[rel][i%num_examples])]
+                                det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] = [copy.deepcopy(notshared[i%num_examples])]
                                 if i % num_examples == num_examples - 1:
-                                    random.shuffle(equiv_classes[rel])
+                                    random.shuffle(notshared)
                             i += 1
+                            det_equiv_classes[(det1,neg1,det2,neg2,subrel)][rel] += copy.deepcopy(shared)
     final_result = []
     for det1 in dets1:
         for neg1 in negs1:
@@ -485,6 +495,7 @@ def create_gen_split():
                                 else:
                                     example["hypsubdet"] = det2
                                 example["submod"] = subrel
+                                example["negverb"] = rel
                                 example["extra"] = subject_NegDP_relation
                                 final_result.append(example)
     total = len(final_result)
@@ -495,90 +506,154 @@ def create_gen_split():
     i = 0
     options = [1,2,3,4,5]
     random.shuffle(options)
+    shared = options[0:int(5*bigratio)]
+    notshared = options[int(5*bigratio):]
+    random.shuffle(notshared)
     for det1 in dets1:
         for det2 in dets2:
             for objrel in objrels:
-                verbfix[(det1,det2,objrel)] = options[i%5]
-                if i%5 == 4:
-                    random.shuffle(options)
+                verbfix[(det1,det2,objrel)] = [notshared[i%len(notshared)]]
+                verbfix[(det1,det2,objrel)] += copy.deepcopy(shared)
+                if i%len(notshared) == len(notshared) - 1:
+                    random.shuffle(notshared)
                 i+= 1
     objfix = dict()
     i = 0
     random.shuffle(options)
+    shared = options[0:int(5*bigratio)]
+    notshared = options[int(5*bigratio):]
+    random.shuffle(notshared)
     for det1 in dets1:
         for det2 in dets2:
             for verbrel in verbrels:
-                objfix[(det1,det2,verbrel)] = options[i%5]
-                if i%5 == 4:
-                    random.shuffle(options)
+                objfix[(det1,det2,verbrel)] = [notshared[i%len(notshared)]]
+                objfix[(det1,det2,verbrel)]+= copy.deepcopy(shared)
+                if i%len(notshared) == len(notshared) - 1:
+                    random.shuffle(notshared)
                 i += 1
     subfix = dict()
     i = 0
     random.shuffle(options)
-    spread = {"permits":0, "contradicts":0, "entails":0}
+    shared = options[0:int(5*bigratio)]
+    notshared = options[int(5*bigratio):]
+    random.shuffle(notshared)
+    spread = {"neutral":0, "contradiction":0, "entailment":0}
     for det1 in dets1:
         for det2 in dets2:
             for rel in relations:
-                subfix[(det1,det2,rel)] = options[i%5]
-                if i%5 == 4:
-                    random.shuffle(options)
+                subfix[(det1,det2,rel)] = [notshared[i%len(notshared)]]
+                subfix[(det1,det2,rel)] += copy.deepcopy(shared)
+                if i%len(notshared) == len(notshared) - 1:
+                    random.shuffle(notshared)
                 i += 1
+    print(shared, notshared)
+    true_final_result = []
+    memes = set()
     for i in range(total):
+        memes.add((final_result[i]["premsubdet"], final_result[i]["hypsubdet"], final_result[i]["negverb"]))
+        temp = []
         if final_result[i]["objmod"] == "independence":
             type = objfix[(final_result[i]["premobjdet"], final_result[i]["hypobjdet"], final_result[i]["verbmod"])]
-            if type == 1:
+            if 1 in type:
                 final_result[i]["objmod"] = "entails"
                 final_result[i]["obj"] = "independence"
-            if type == 2:
+                temp.append(copy.deepcopy(final_result[i]))
+            if 2 in type:
                 final_result[i]["objmod"] = "reverse entails"
                 final_result[i]["obj"] = "independence"
-            if type == 3:
+                temp.append(copy.deepcopy(final_result[i]))
+            if 3 in type:
                 final_result[i]["objmod"] = "equivalence"
                 final_result[i]["obj"] = "independence"
-            if type == 4:
+                temp.append(copy.deepcopy(final_result[i]))
+            if 4 in type:
+                final_result[i]["objmod"] = "independence"
                 final_result[i]["obj"] = "independence"
-            if type == 5:
+                temp.append(copy.deepcopy(final_result[i]))
+            if 5 in type:
+                final_result[i]["objmod"] = "independence"
                 final_result[i]["obj"] = "equivalence"
+                temp.append(copy.deepcopy(final_result[i]))
         else:
             final_result[i]["obj"] = "equivalence"
+            temp.append(copy.deepcopy(final_result[i]))
+        temp2 = []
         if final_result[i]["verbmod"] == "independence":
             type = verbfix[(final_result[i]["premobjdet"], final_result[i]["hypobjdet"], final_result[i]["objmod"])]
-            if type == 1:
-                final_result[i]["verbmod"] = "entails"
-                final_result[i]["verb"] = "independence"
-            if type == 2:
-                final_result[i]["verbmod"] = "reverse entails"
-                final_result[i]["verb"] = "independence"
-            if type == 3:
-                final_result[i]["verbmod"] = "equivalence"
-                final_result[i]["verb"] = "independence"
-            if type == 4:
-                final_result[i]["verb"] = "independence"
-            if type == 5:
-                final_result[i]["verb"] = "equivalence"
+            if 1 in type:
+                for example in temp:
+                    example["verbmod"] = "entails"
+                    example["verb"] = "independence"
+                    temp2.append(copy.deepcopy(example))
+            if 2 in type:
+                for example in temp:
+                    example["verbmod"] = "reverse entails"
+                    example["verb"] = "independence"
+                    temp2.append(copy.deepcopy(example))
+            if 3 in type:
+                for example in temp:
+                    example["verbmod"] = "equivalence"
+                    example["verb"] = "independence"
+                    temp2.append(copy.deepcopy(example))
+            if 4 in type:
+                for example in temp:
+                    example["verbmod"] = "independence"
+                    example["verb"] = "independence"
+                    temp2.append(copy.deepcopy(example))
+            if 5 in type:
+                for example in temp:
+                    example["verbmod"] = "independence"
+                    example["verb"] = "equivalence"
+                    temp2.append(copy.deepcopy(example))
         else:
-            final_result[i]["verb"] = "equivalence"
+            for example in temp:
+                example["verbmod"] = final_result[i]["verbmod"]
+                example["verb"] = "equivalence"
+                temp2.append(copy.deepcopy(example))
+        temp3 = []
         if final_result[i]["submod"] == "independence":
-            type = subfix[(final_result[i]["premsubdet"], final_result[i]["hypsubdet"], final_result[i]["extra"])]
-            if type == 1:
-                final_result[i]["submod"] = "entails"
-                final_result[i]["sub"] = "independence"
-            if type == 2:
-                final_result[i]["submod"] = "reverse entails"
-                final_result[i]["sub"] = "independence"
-            if type == 3:
-                final_result[i]["submod"] = "equivalence"
-                final_result[i]["sub"] = "independence"
-            if type == 4:
-                final_result[i]["sub"] = "independence"
-            if type == 5:
-                final_result[i]["sub"] = "equivalence"
+            type = subfix[(final_result[i]["premsubdet"], final_result[i]["hypsubdet"], final_result[i]["negverb"])]
+            if 1 in type:
+                for example in temp2:
+                    example["submod"] = "entails"
+                    example["sub"] = "independence"
+                    temp3.append(copy.deepcopy(example))
+            if 2 in type:
+                for example in temp2:
+                    example["submod"] = "reverse entails"
+                    example["sub"] = "independence"
+                    temp3.append(copy.deepcopy(example))
+            if 3 in type:
+                for example in temp2:
+                    example["submod"] = "equivalence"
+                    example["sub"] = "independence"
+                    temp3.append(copy.deepcopy(example))
+            if 4 in type:
+                for example in temp2:
+                    example["submod"] = "independence"
+                    example["sub"] = "independence"
+                    temp3.append(copy.deepcopy(example))
+            if 5 in type:
+                for example in temp2:
+                    example["submod"] = "independence"
+                    example["sub"] = "equivalence"
+                    temp3.append(copy.deepcopy(example))
         else:
-            final_result[i]["sub"] = "equivalence"
+            for example in temp2:
+                example["submod"] = final_result[i]["submod"]
+                example["sub"] = "equivalence"
+                temp3.append(copy.deepcopy(example))
+        true_final_result += temp3
         spread[get_label(final_result[i].pop("extra", None))] += 1
+    print(len(memes), len(memes))
+    final_result = true_final_result
     final_encodings = set()
     easycount = 0
+    memes = set()
     for example in final_result:
+        memes.add((example["submod"], example["sub"]))
+        if "verb" not in example:
+            print(example)
         if example["verb"] == "independence" or example["verbmod"] == "independence" or example["sub"] == "independence" or example["submod"] == "independence" or example["obj"] == "independence" or example["objmod"] == "independence":
             easycount +=1
         encoding = []
@@ -650,4 +725,5 @@ def create_gen_split():
                                                     if json.dumps([a,b,c,d,e,f,g,h,i,j,k,l]) not in final_encodings:
                                                         inverse_encodings.add(json.dumps([a,b,c,d,e,f,g,h,i,j,k,l]))
     print(len(inverse_encodings), len(final_encodings))
+    print(len(memes),memes)
     return final_encodings, inverse_encodings

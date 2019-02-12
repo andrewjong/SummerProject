@@ -492,10 +492,10 @@ def level2_example_counts(data, ekeys,ckeys,pkeys):
             z = 3
         weights[x,y,z]+=pcounts[i]
     print("hey")
-    for i in range(4):
-        for j in range(4):
-            for k in range(4):
-                print(weights[x,y,z])
+    #for i in range(4):
+        #for j in range(4):
+            #for k in range(4):
+                #print(weights[x,y,z])
     return ecounts, ccounts, pcounts
 
 def get_simple_encoding_counts(data, level, ekeys, ckeys, pkeys):
@@ -569,20 +569,24 @@ def create_corpus(size, filename):
     examples = generate_balanced_data("simple_solutions", "boolean_solutions", size, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0")
     save_data(examples, filename)
 if False:
-    data, _, _ = process_data(1.0)
-    restrictions, inverse_restrictions = nlm.create_gen_split()
-    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 500000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
-    save_data(examples, "gendata.train")
-    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
-    save_data(examples, "gendata.val")
-    examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
-    save_data(examples, "gendata.test")
-    premise = parse_simple_sentence(data,examples[0][0])[0]
-    hypothesis = parse_simple_sentence(data,examples[0][2])[0]
-    _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis)
-    for example in examples:
-        premise = parse_simple_sentence(data,example[0])[0]
-        hypothesis = parse_simple_sentence(data,example[2])[0]
-        _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis, relations_seen)
-    for k in relations_seen:
-        print(k, len(relations_seen[k]))
+    for ratio in [0,0.0625, 0.125, 0.25, 0.5, 0.75]:
+        data, _, _ = process_data(1.0)
+        restrictions, inverse_restrictions = nlm.create_gen_split(ratio)
+        examples = generate_balanced_data("simple_solutions", "boolean_solutions", 500000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = restrictions)
+        tr = examples
+        save_data(examples, str(ratio) + "gendata.train")
+        premise = parse_simple_sentence(data,tr[0][0])[0]
+        hypothesis = parse_simple_sentence(data,tr[0][2])[0]
+        _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis)
+        for example in tr:
+            premise = parse_simple_sentence(data,example[0])[0]
+            hypothesis = parse_simple_sentence(data,example[2])[0]
+            _, relations_seen = nlm.compute_simple_relation_gentest(premise, hypothesis, relations_seen)
+        for k in relations_seen:
+            print(k, len(relations_seen[k]))
+            if len(relations_seen[k]) < 10:
+                print(relations_seen[k])
+        examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+        save_data(examples, str(ratio) +"gendata.val")
+        examples = generate_balanced_data("simple_solutions", "boolean_solutions", 10000, 0, data, simple_sampling = "level 2", boolean_sampling = "level 0",restrictions = inverse_restrictions)
+        save_data(examples, str(ratio) +"gendata.test")

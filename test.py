@@ -5,7 +5,7 @@ import data_util
 import json
 if __name__ == '__main__':
     data, _, _ = gd.process_data(1.0)
-    if True:
+    if False:
         #fol.build_simple_file("simple_solutions")
         fol.build_boolean_file("boolean_solutions")
         with open("simple_solutions","r") as f:
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         print(etemp)
         print(ctemp)
         print(ptemp)
-    examples = gd.generate_balanced_data("simple_solutions", "boolean_solutions", 100, 100, data,simple_sampling = "level 2", boolean_sampling = "level 1")
+    examples = gd.generate_balanced_data("simple_solutions", "boolean_solutions", 100, 0, data,simple_sampling = "level 2", boolean_sampling = "level 1")
     gd.save_data(examples, "test")
     examples = []
     with open("test", "r") as f:
@@ -74,6 +74,7 @@ if __name__ == '__main__':
             nlm_label = nlm.get_label(nlm.compute_simple_relation(premise[0], hypothesis[0]))
             if example["gold_label"] != fol_label or fol_label != nlm_label:
                 print("We have a problem with simple generation")
+                print(example["gold_label"], fol_label,nlm_label)
         else:
             premise1 = premise[0]
             premise_conjunction = premise[1]
