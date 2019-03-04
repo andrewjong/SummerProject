@@ -4,6 +4,7 @@ import tensorflow as tf
 
 class PIModel(object):
     def __init__(self, config, pretrained_embeddings, model_type):
+        self.length = None
         self.model_type = model_type
         self.config = config
         if self.config.activationstring == "relu":
@@ -82,7 +83,7 @@ class PIModel(object):
             alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
             r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
             Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            for i in range(1,9):
+            for i in range(1,self.length):
                 M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
                 alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
                 r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
@@ -92,9 +93,29 @@ class PIModel(object):
         Ws1 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
         bs1 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
         h = self.config.activation(tf.matmul(h, Ws1) + bs1)
+        Ws3 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
+        bs3 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
+        h = self.config.activation(tf.matmul(h, Ws3) + bs3)
+
         Ws2 = tf.Variable(initer([self.config.state_size,3]))
         bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
-        self.logits = tf.matmul(h, Ws2) + bs2
+        self.logits9 = tf.matmul(h, Ws2) + bs2
+
+        Ws2 = tf.Variable(initer([self.config.state_size,4]), name="one")
+        bs2 = tf.Variable(tf.zeros([1,4]) + 1e-3)
+        self.logits1 = tf.matmul(h, Ws2) + bs2
+
+        Ws2 = tf.Variable(initer([self.config.state_size,4]), name="two")
+        bs2 = tf.Variable(tf.zeros([1,4]) + 1e-3)
+        self.logits2 = tf.matmul(h, Ws2) + bs2
+
+        Ws2 = tf.Variable(initer([self.config.state_size,7]), name="five")
+        bs2 = tf.Variable(tf.zeros([1,7]) + 1e-3, name="five")
+        self.logits5 = tf.matmul(h, Ws2) + bs2
+
+        Ws2 = tf.Variable(initer([self.config.state_size,7]), name="six")
+        bs2 = tf.Variable(tf.zeros([1,7]) + 1e-3, name="six")
+        self.logits6 = tf.matmul(h, Ws2) + bs2
 
     def LSTMcombine(self,children = None,input=None, size=None):
         if size is None:
@@ -206,10 +227,32 @@ class PIModel(object):
                                             kernel_initializer=xavier,
                                             use_bias=True,
                                             )
-
-            self.logits = tf.layers.dense(representation, 3,
+            representation = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=tf.nn.relu,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            )
+            self.logits9 = tf.layers.dense(representation, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
+            self.logits1 = tf.layers.dense(representation, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="one")
+            self.logits2 = tf.layers.dense(representation, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="two")
+            self.logits5 = tf.layers.dense(representation, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five")
+            self.logits6 = tf.layers.dense(representation, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six")
         if self.model_type == "restcomp":
             subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"ycomp", reuse=False, size=16)
             subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"zcomp",reuse=False, size=2)
@@ -251,9 +294,63 @@ class PIModel(object):
             almostfinal = self.combine([subjectd, subjectNP,],"comp")
             final = self.combine([almostfinal, negobjectDP],"comp")
             finalrep = self.combine([final],"final", reuse=False)
-            self.logits = tf.layers.dense(finalrep, 3,
+            finalrep = self.combine([finalrep],"final2", reuse=False)
+            self.logits9 = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
+
+            final= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp")
+            finalrep = self.combine([final],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits1 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="one")
+
+            mod= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp")
+            arg= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            final= self.combine([mod, arg],"comp")
+            finalrep = self.combine([final],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits2 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="two")
+
+            det = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp")
+            mod1= self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            arg1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp")
+            mod2= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp")
+            arg2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp")
+            rel1= self.combine([mod1, arg1],"comp")
+            rel2= self.combine([mod2, arg2],"comp")
+            DP1= self.combine([det, rel1],"comp")
+            final= self.combine([DP1, rel2],"comp")
+            finalrep = self.combine([final],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits5 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five")
+
+            neg = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp")
+            det = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            mod1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp")
+            arg1= self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp")
+            mod2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp")
+            arg2= self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp")
+            rel1 = self.combine([mod1, arg1],"comp")
+            rel2= self.combine([mod2, arg2],"comp")
+            DP1= self.combine([det, rel1],"comp")
+            DP2= self.combine([DP1, rel2],"comp")
+            final = self.combine([neg, DP2], "comp")
+            finalrep = self.combine([final],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits6 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six")
+
 
         if self.model_type == "LSTMsimpcomp":
             initer = tf.contrib.layers.xavier_initializer()
@@ -589,9 +686,57 @@ class PIModel(object):
                 Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
                 Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
                 finalrep = tf.tanh(tf.matmul(r, Wp) + tf.matmul(finalrep, Wx))
-            self.logits = tf.layers.dense(finalrep, 3,
+            self.logits9 = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
+
+            final= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"final")
+            finalrep = self.combine([final], "final2")
+            self.logits1 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="one")
+
+            premrep= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            hyprep= self.combine([tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            final= self.combine([premrep, hyprep],"final")
+            finalrep = self.combine([final], "final2")
+            self.logits2 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="two")
+
+            prel1= self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim])],"comp")
+            prel2= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            pDP1= self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), prel1],"comp")
+            premrep= self.combine([pDP1, prel2],"comp")
+            hrel1= self.combine([tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp")
+            hrel2= self.combine([tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
+            hDP1= self.combine([tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim]), hrel1],"comp")
+            hyprep= self.combine([hDP1, hrel2],"comp")
+            final= self.combine([premrep, hyprep],"final")
+            finalrep = self.combine([final], "final2")
+            self.logits5 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five")
+
+            prel1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim])],"comp")
+            prel2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim])],"comp")
+            pDP1 = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), prel1],"comp")
+            pDP2 = self.combine([pDP1, prel2],"comp")
+            pneg= self.combine([tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim]), pDP2], "comp")
+            hrel1= self.combine([tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp")
+            hrel2= self.combine([tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp")
+            hDP1= self.combine([tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim]), hrel1],"comp")
+            hDP2= self.combine([hDP1, hrel2],"comp")
+            hneg= self.combine([tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim]), hDP2], "comp")
+            final = self.combine([premrep, hyprep],"final")
+            finalrep = self.combine([final], "final2")
+            self.logits6 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six")
 
         if self.model_type == "sepboolcomp":
             psubjectd = tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim])
@@ -682,23 +827,77 @@ class PIModel(object):
         reg = 0
         for v in tf.trainable_variables():
             reg = reg + tf.nn.l2_loss(v)
-        self.loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits) + beta*reg)
+        self.loss1 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits1) + beta*reg)
+        beta = self.l2_placeholder
+        reg = 0
+        for v in tf.trainable_variables():
+            reg = reg + tf.nn.l2_loss(v)
+        self.loss2 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits2) + beta*reg)
+        beta = self.l2_placeholder
+        reg = 0
+        for v in tf.trainable_variables():
+            reg = reg + tf.nn.l2_loss(v)
+        self.loss5 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits5) + beta*reg)
+        beta = self.l2_placeholder
+        reg = 0
+        for v in tf.trainable_variables():
+            reg = reg + tf.nn.l2_loss(v)
+        self.loss6 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits6) + beta*reg)
+        beta = self.l2_placeholder
+        reg = 0
+        for v in tf.trainable_variables():
+            reg = reg + tf.nn.l2_loss(v)
+        self.loss9 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits9) + beta*reg)
 
     def add_train_op(self):
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
         tvars = tf.trainable_variables()
-        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, tvars), self.config.max_grad_norm)
-        self.train_op = optimizer.apply_gradients(zip(grads, tvars))
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1, tvars), self.config.max_grad_norm)
+        self.train_op1 = optimizer.apply_gradients(zip(grads, tvars))
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss2, tvars), self.config.max_grad_norm)
+        self.train_op2 = optimizer.apply_gradients(zip(grads, tvars))
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss5, tvars), self.config.max_grad_norm)
+        self.train_op5 = optimizer.apply_gradients(zip(grads, tvars))
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss6, tvars), self.config.max_grad_norm)
+        self.train_op6 = optimizer.apply_gradients(zip(grads, tvars))
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss9, tvars), self.config.max_grad_norm)
+        self.train_op9 = optimizer.apply_gradients(zip(grads, tvars))
 
-    def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch):
+    def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch, length):
         input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, self.config.dropout, self.config.l2_norm, self.config.learning_rate, label_batch)
-        output_feed = [self.train_op, self.logits, self.loss]
-        _, logits, loss = sess.run(output_feed, input_feed)
-        return np.argmax(logits, axis=1), loss
+        self.length = length
+        if length == 1:
+            output_feed = [self.train_op1, self.logits1, self.loss1]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return np.argmax(logits, axis=1), loss
+        if length == 2:
+            output_feed = [self.train_op2, self.logits2, self.loss2]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return np.argmax(logits, axis=1), loss
+        if length == 5:
+            output_feed = [self.train_op5, self.logits5, self.loss5]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return np.argmax(logits, axis=1), loss
+        if length == 6:
+            output_feed = [self.train_op6, self.logits6, self.loss6]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return np.argmax(logits, axis=1), loss
+        if length == 9:
+            output_feed = [self.train_op9, self.logits9, self.loss9]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return np.argmax(logits, axis=1), loss
 
     def predict(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch):
         input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len,1, 0, 0, label_batch)
-        output_feed = [self.logits, self.loss]
+        output_feed = [self.logits9, self.loss9]
         logits, loss = sess.run(output_feed, input_feed)
         return np.argmax(logits, axis=1), loss
 
@@ -722,7 +921,7 @@ class PIModel(object):
         preds = []
         labels = []
         losses = 0.
-        for prem, prem_len, hyp, hyp_len, label in dataset:
+        for prem, prem_len, hyp, hyp_len, label, _ in dataset:
             pred, loss = self.predict(sess, prem, prem_len, hyp, hyp_len, label)
             preds.extend(pred)
             labels.extend(label)

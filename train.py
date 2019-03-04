@@ -39,12 +39,12 @@ def confuse(preds, labels):
         matrix[preds[i]][labels[i]] += 1
     return matrix
 
-def hyperparameter_search(models,  data_path,data_name,  learning_rates, l2_norms, dropouts, activation_functions, vocab_dims, state_sizes, batch_sizes, num_epoch):
+def hyperparameter_search(models,  data_path,data_name,  learning_rates, l2_norms, dropouts, activation_functions, vocab_dims, state_sizes, batch_sizes, num_epoch, crazy=False):
     labels = ['entailment','contradiction','neutral']
     hyp_results = dict()
     for model,attention in models:
-        if not os.path.exists(model+attention):
-            os.mkdir(model+attention)
+        if not os.path.exists(model+attention + data_name):
+            os.mkdir(model+attention + data_name)
         for learning_rate in learning_rates:
             for l2_norm in l2_norms:
                 for dropout in dropouts:
@@ -55,9 +55,9 @@ def hyperparameter_search(models,  data_path,data_name,  learning_rates, l2_norm
                             for state_size in state_sizes:
                                 for batch_size in batch_sizes:
                                     results_folder = str(learning_rate) + "$" + str(l2_norm) +"$" + str(activation_function) +"$" + str(dropout) +"$" + str(vocab_dim) +"$" + str(state_size) +"$" + str(batch_size)
-                                    if not os.path.exists(os.path.join(model+attention,results_folder)):
-                                        os.mkdir(os.path.join(model+attention,results_folder))
-                                    best_train, best_val, best_test, accs = train_model(model, attention, data_path,os.path.join(model+attention,results_folder), learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch)
+                                    if not os.path.exists(os.path.join(model+attention + data_name,results_folder)):
+                                        os.mkdir(os.path.join(model+attention+ data_name,results_folder))
+                                    best_train, best_val, best_test, accs = train_model(model, attention, data_path,os.path.join(model+attention + data_name,results_folder), learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch,crazy)
                                     hyp_results[results_folder] = (best_train, best_val, best_test, accs)
         bestscore = 0
         bestparams = None
@@ -69,7 +69,7 @@ def hyperparameter_search(models,  data_path,data_name,  learning_rates, l2_norm
         with open(model + attention +  data_name+ "hypsearch_results", "w") as f:
             f.write(json.dumps((hyp_results, bestparams)))
 
-def train_model(model, attention, data_path,results_path, learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch):
+def train_model(model, attention, data_path,results_path, learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch, crazy):
     print(learning_rate, l2_norm, dropout, activation_function, vocab_dim, state_size, batch_size, num_epoch)
     embeddings = model_util.get_word_vec(model_util.get_vocab(), vocab_dim)
     word_to_id = model_util.get_word_to_id(vocab=model_util.get_vocab())
@@ -88,11 +88,14 @@ def train_model(model, attention, data_path,results_path, learning_rate, l2_norm
             ### Call training and validation routine
             ### This part runs one epoch of trainin#g and one epoch of validation
             ### Outcomes: preds, labels, constr, loss
-            train_data = model_util.get_feed(os.path.join(data_path+  ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, shuffle = True)
-            for prem, prem_len, hyp, hyp_len, label in train_data:
-                _, _= m.optimize(sess, prem, prem_len, hyp, hyp_len, label)
+            if crazy:
+                train_data = model_util.crazy_get_feed(os.path.join(data_path+  ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, shuffle = True)
+            else:
+                train_data = model_util.get_feed(os.path.join(data_path+  ".train"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len, shuffle = True)
+            for prem, prem_len, hyp, hyp_len, label, length in train_data:
+                _, _= m.optimize(sess, prem, prem_len, hyp, hyp_len, label, length)
                 count += 1
-                if count*config.batch_size % 100000< config.batch_size:
+                if count*config.batch_size % 10< config.batch_size:
                     val_data = model_util.get_feed(os.path.join(data_path +".val"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len)
                     preds_val, labels_val, _= m.run_test_epoch(sess, val_data)
                     test_data = model_util.get_feed(os.path.join(data_path +".test"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len)
@@ -116,8 +119,8 @@ def mean_confidence_interval(data, confidence=0.95):
     h = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1)
     return h
 
-def load_hyper_parameters_and_train(model, attention, data_path,data_name,  num_epoch):
-    results_path =os.path.join(model+attention,"finalmodels")
+def load_hyper_parameters_and_train(model, attention, data_path,data_name,  num_epoch, crazy):
+    results_path =os.path.join(model+attention+  data_name,"finalmodels")
     with open(model + attention +  data_name+ "hypsearch_results", "r") as f:
         line = f.read()
         _, params = json.loads(line)
@@ -127,7 +130,7 @@ def load_hyper_parameters_and_train(model, attention, data_path,data_name,  num_
     testaccs = []
     runs = []
     for i in range(5):
-        tr, val, test, run = train_model(model, attention, data_path,results_path + str(i), float(learning_rate), float(l2_norm), float(dropout), activation_function, int(vocab_dim), int(state_size), int(batch_size), int(num_epoch))
+        tr, val, test, run = train_model(model, attention, data_path, results_path + data_name +  str(i), float(learning_rate), float(l2_norm), float(dropout), activation_function, int(vocab_dim), int(state_size), int(batch_size), int(num_epoch),crazy)
         trainaccs.append(tr)
         valaccs.append(val)
         testaccs.append(test)
@@ -151,7 +154,8 @@ if __name__ == '__main__':
     model= sys.argv[3]
     attention= sys.argv[4]
     epoch = sys.argv[5]
+    crazy = sys.argv[6]
     #models = [ ("simpcomp", "no"),("sepsimpcomp", "no"), ("siamese", "no"),("seq2seq","no"),("seq2seq","wordbyword")]
     models = [ (model, attention)]
-    hyperparameter_search(models, path,name, [0.001, 0.0003,0.0001], [0, 0.0001, 0.001], [1.0, 0.9, 0.8], ["tanh", "relu"], [100], [100], [64], int(epoch))
-    load_hyper_parameters_and_train(models[0][0], models[0][1],"training_data/dummy", "dummy", epoch)
+    hyperparameter_search(models, path,name, [0.001, 0.0003,0.0001], [0, 0.0001, 0.001], [1.0, 0.9, 0.8], ["tanh", "relu"], [100], [100], [64], int(epoch), bool(int(crazy)))
+    load_hyper_parameters_and_train(models[0][0], models[0][1],path,name, epoch, bool(int(crazy)))
