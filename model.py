@@ -6,6 +6,10 @@ class PIModel(object):
     def __init__(self, config, pretrained_embeddings, model_type):
         self.length = None
         self.model_type = model_type
+        if self.model_type[0:4] == "rntn":
+            self.rntn = True
+        else:
+            self.rntn = False
         self.config = config
         if self.config.activationstring == "relu":
             self.config.activation = tf.nn.relu
@@ -158,15 +162,19 @@ class PIModel(object):
         h =  tf.multiply(o,tf.nn.tanh(c))
         return (h, c)
 
-
     def combine(self,stuff, name, reuse=True, size=None):
         if size is None:
             size = self.config.state_size
         xavier = tf.contrib.layers.xavier_initializer()
+        if self.rntn and len(stuff) == 2:
+            V= tf.Variable(xavier([self.config.state_size,size, self.config.state_size]), name=name+"v")
+            b= tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name=name+"b")
+            W= tf.Variable(xavier([self.config.state_size*len(stuff),size]), name=name+"w")
+            return self.config.activation(tf.tensordot(tf.tensordot(stuff[0], V, [[2], [0]]), stuff[1], [[1], [0]])+ tf.matmul(tf.concat(stuff, 1), W) + b)
         return tf.layers.dense(
                                 tf.concat(stuff, 1),
                                 size,
-                                activation=tf.nn.relu,
+                                activation=self.config.activation,
                                 kernel_initializer=xavier,
                                 use_bias=True,
                                 name=name,
@@ -208,9 +216,25 @@ class PIModel(object):
                                             use_bias=True,
                                             )
 
-            self.logits = tf.layers.dense(representation2, 3,
+            self.logits9 = tf.layers.dense(representation2, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
+            self.logits1 = tf.layers.dense(representation2, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="one")
+            self.logits2 = tf.layers.dense(representation2, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="two")
+            self.logits5 = tf.layers.dense(representation2, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five")
+            self.logits6 = tf.layers.dense(representation2, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six")
 
         # bag of words: average premise, average hypothesis, then concatenate
         if self.model_type == 'bow':
@@ -275,7 +299,7 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
-        if self.model_type == "simpcomp":
+        if self.model_type == "simpcomp" or self.model_type == "rntnsimpcomp":
             subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp", reuse=False)
             subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp")
             subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp")
@@ -351,6 +375,129 @@ class PIModel(object):
                                           use_bias=True,
                                           name="six")
 
+        if self.model_type == "reallysimpcomp" or self.model_type == "rntnreallysimpcomp":
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd", reuse=False)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1", reuse=False)
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1")
+            neg = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"compneg", reuse=False)
+            verb = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1")
+            adverb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp1")
+            objectd = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,6,:], [-1,self.config.vocab_dim])],"compd")
+            objectn = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,7,:], [-1,self.config.vocab_dim])],"comp1")
+            objecta = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,8,:], [-1,self.config.vocab_dim])],"comp1")
+            subjectNP = self.combine([subjecta, subjectn],"comp2", reuse=False)
+            objectNP = self.combine([objecta, objectn],"comp2")
+            VP = self.combine([adverb, verb],"comp2")
+            objectDP1 = self.combine([objectd, objectNP],"compobjDP1", reuse=False)
+            objectDP2 = self.combine([objectDP1, VP],"compobjDP2", reuse=False)
+            negobjectDP = self.combine([neg, objectDP2],"compnegobjDP", reuse=False)
+            almostfinal = self.combine([subjectd, subjectNP,],"compclose", reuse=False)
+            final = self.combine([almostfinal, negobjectDP],"compfinal", reuse=False)
+            finalrep = self.combine([final],"final", reuse=False)
+            finalrep = self.combine([finalrep],"final2", reuse=False)
+            self.logits9 = tf.layers.dense(finalrep, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+
+            finalrep= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp1")
+            self.logits1 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="one")
+
+            mod= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp1")
+            arg= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1")
+            finalrep= self.combine([mod, arg],"comp2")
+            self.logits2 = tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="two")
+
+            det = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd")
+            mod1= self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1")
+            arg1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1")
+            mod2= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1")
+            arg2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1")
+            rel1= self.combine([mod1, arg1],"comp2")
+            rel2= self.combine([mod2, arg2],"comp2")
+            DP1= self.combine([det, rel1],"compobjDP1")
+            finalrep= self.combine([DP1, rel2],"compobjDP2")
+            self.logits5 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five")
+
+            neg = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compneg")
+            det = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"compd")
+            mod1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1")
+            arg1= self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1")
+            mod2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1")
+            arg2= self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp1")
+            rel1 = self.combine([mod1, arg1],"comp2")
+            rel2= self.combine([mod2, arg2],"comp2")
+            DP1= self.combine([det, rel1],"compobjDP1")
+            DP2= self.combine([DP1, rel2],"compobjDP2")
+            finalrep = self.combine([neg, DP2], "compnegobjDP")
+            self.logits6 = tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six")
+
+        if self.model_type == "superreallysimpcomp" or self.model_type == "rntnsuperreallysimpcomp":
+            subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd", reuse=False, size=16)
+            subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1", reuse=False, size = 4)
+            subjecta = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            neg = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"compneg", reuse=False, size = 4)
+            verb = self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            adverb = self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            objectd = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,6,:], [-1,self.config.vocab_dim])],"compd", size = 16)
+            objectn = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,7,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            objecta = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,8,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            subjectNP = self.combine([subjecta, subjectn],"comp2", reuse=False, size = 4)
+            objectNP = self.combine([objecta, objectn],"comp2", size = 4)
+            VP = self.combine([adverb, verb],"comp2", size = 4)
+            objectDP1 = self.combine([objectd, objectNP],"compobjDP1", reuse=False, size = 7)
+            objectDP2 = self.combine([objectDP1, VP],"compobjDP2", reuse=False, size = 7)
+            negobjectDP = self.combine([neg, objectDP2],"compnegobjDP", reuse=False, size = 7)
+            almostfinal = self.combine([subjectd, subjectNP,],"compclose", reuse=False, size = 7)
+            final = self.combine([almostfinal, negobjectDP],"compfinal", reuse=False, size = 7)
+            finalrep = self.combine([final],"final", reuse=False, size = 7)
+            finalrep = self.combine([finalrep],"final2", reuse=False, size = 7)
+            self.logits9 = tf.layers.dense(finalrep, 3,
+                                          kernel_initializer=xavier,
+                                          use_bias=True)
+
+            finalrep= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            self.logits1 = finalrep
+
+            mod= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            arg= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            finalrep= self.combine([mod, arg],"comp2", size=4)
+            self.logits2 = finalrep
+
+            det = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd", size=16)
+            mod1= self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            arg1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            mod2= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            arg2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            rel1= self.combine([mod1, arg1],"comp2", size = 4)
+            rel2= self.combine([mod2, arg2],"comp2", size = 4)
+            DP1= self.combine([det, rel1],"compobjDP1", size = 7)
+            finalrep= self.combine([DP1, rel2],"compobjDP2", size = 7)
+            self.logits5 = finalrep
+
+            neg = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compneg", size = 4)
+            det = self.combine([tf.reshape(self.embed_prems[:,3,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"compd", size = 16)
+            mod1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            arg1= self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            mod2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            arg2= self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
+            rel1 = self.combine([mod1, arg1],"comp2", size = 4)
+            rel2= self.combine([mod2, arg2],"comp2", size = 4)
+            DP1= self.combine([det, rel1],"compobjDP1", size = 7)
+            DP2= self.combine([DP1, rel2],"compobjDP2", size = 7)
+            finalrep = self.combine([neg, DP2], "compnegobjDP", size = 7)
+            self.logits6 = finalrep
 
         if self.model_type == "LSTMsimpcomp":
             initer = tf.contrib.layers.xavier_initializer()
