@@ -162,15 +162,17 @@ class PIModel(object):
         h =  tf.multiply(o,tf.nn.tanh(c))
         return (h, c)
 
-    def combine(self,stuff, name, reuse=True, size=None):
+    def combine(self,stuff, name, reuse=True, size=None, input_sizes=None):
         if size is None:
             size = self.config.state_size
+        if input_sizes is None:
+            input_sizes = [self.config.state_size, self.config.state_size]
         xavier = tf.contrib.layers.xavier_initializer()
         if self.rntn and len(stuff) == 2:
-            V= tf.Variable(xavier([self.config.state_size,size, self.config.state_size]), name=name+"v")
-            b= tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3, name=name+"b")
-            W= tf.Variable(xavier([self.config.state_size*len(stuff),size]), name=name+"w")
-            return self.config.activation(tf.tensordot(tf.tensordot(stuff[0], V, [[2], [0]]), stuff[1], [[1], [0]])+ tf.matmul(tf.concat(stuff, 1), W) + b)
+            V= tf.Variable(xavier([input_sizes[0],size, input_sizes[1]]), name=name+"v")
+            b= tf.Variable(tf.zeros([1,size]) + 1e-3, name=name+"b")
+            W= tf.Variable(xavier([sum(input_sizes),size]), name=name+"w")
+            return self.config.activation(tf.reduce_sum(tf.multiply(tf.tensordot(stuff[0], V, [[1], [0]]), tf.expand_dims(stuff[1], 1)))+ tf.matmul(tf.concat(stuff, 1), W) + b)
         return tf.layers.dense(
                                 tf.concat(stuff, 1),
                                 size,
@@ -453,16 +455,14 @@ class PIModel(object):
             objectd = self.combine([tf.reshape(self.embed_prems[:,6,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,6,:], [-1,self.config.vocab_dim])],"compd", size = 16)
             objectn = self.combine([tf.reshape(self.embed_prems[:,7,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,7,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             objecta = self.combine([tf.reshape(self.embed_prems[:,8,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,8,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
-            subjectNP = self.combine([subjecta, subjectn],"comp2", reuse=False, size = 4)
-            objectNP = self.combine([objecta, objectn],"comp2", size = 4)
-            VP = self.combine([adverb, verb],"comp2", size = 4)
-            objectDP1 = self.combine([objectd, objectNP],"compobjDP1", reuse=False, size = 7)
-            objectDP2 = self.combine([objectDP1, VP],"compobjDP2", reuse=False, size = 7)
-            negobjectDP = self.combine([neg, objectDP2],"compnegobjDP", reuse=False, size = 7)
-            almostfinal = self.combine([subjectd, subjectNP,],"compclose", reuse=False, size = 7)
-            final = self.combine([almostfinal, negobjectDP],"compfinal", reuse=False, size = 7)
-            finalrep = self.combine([final],"final", reuse=False, size = 7)
-            finalrep = self.combine([finalrep],"final2", reuse=False, size = 7)
+            subjectNP = self.combine([subjecta, subjectn],"comp2", reuse=False, size = 4, input_sizes=[4,4])
+            objectNP = self.combine([objecta, objectn],"comp2", size = 4, input_sizes=[4,4])
+            VP = self.combine([adverb, verb],"comp2", size = 4, input_sizes=[4,4])
+            objectDP1 = self.combine([objectd, objectNP],"compobjDP1", reuse=False, size = 64, input_sizes=[16,4])
+            objectDP2 = self.combine([objectDP1, VP],"compobjDP2", reuse=False, size = 7, input_sizes=[64,4])
+            negobjectDP = self.combine([neg, objectDP2],"compnegobjDP", reuse=False, size = 7, input_sizes=[4,7])
+            almostfinal = self.combine([subjectd, subjectNP,],"compclose", reuse=False, size=64,input_sizes=[16,4])
+            finalrep = self.combine([almostfinal, negobjectDP],"compfinal", reuse=False, size =7,input_sizes=[64,7])
             self.logits9 = tf.layers.dense(finalrep, 3,
                                           kernel_initializer=xavier,
                                           use_bias=True)
@@ -472,7 +472,7 @@ class PIModel(object):
 
             mod= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             arg= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
-            finalrep= self.combine([mod, arg],"comp2", size=4)
+            finalrep= self.combine([mod, arg],"comp2", size=4, input_sizes=[4,4])
             self.logits2 = finalrep
 
             det = self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd", size=16)
@@ -480,10 +480,10 @@ class PIModel(object):
             arg1= self.combine([tf.reshape(self.embed_prems[:,4,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,2,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             mod2= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             arg2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
-            rel1= self.combine([mod1, arg1],"comp2", size = 4)
-            rel2= self.combine([mod2, arg2],"comp2", size = 4)
-            DP1= self.combine([det, rel1],"compobjDP1", size = 7)
-            finalrep= self.combine([DP1, rel2],"compobjDP2", size = 7)
+            rel1= self.combine([mod1, arg1],"comp2", size = 4, input_sizes=[4,4])
+            rel2= self.combine([mod2, arg2],"comp2", size = 4, input_sizes=[4,4])
+            DP1= self.combine([det, rel1],"compobjDP1", size = 64, input_sizes=[16,4])
+            finalrep= self.combine([DP1, rel2],"compobjDP2", size = 7, input_sizes=[64,4])
             self.logits5 = finalrep
 
             neg = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compneg", size = 4)
@@ -492,11 +492,11 @@ class PIModel(object):
             arg1= self.combine([tf.reshape(self.embed_prems[:,5,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,3,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             mod2= self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,4,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
             arg2= self.combine([tf.reshape(self.embed_prems[:,2,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,5,:], [-1,self.config.vocab_dim])],"comp1", size = 4)
-            rel1 = self.combine([mod1, arg1],"comp2", size = 4)
-            rel2= self.combine([mod2, arg2],"comp2", size = 4)
-            DP1= self.combine([det, rel1],"compobjDP1", size = 7)
-            DP2= self.combine([DP1, rel2],"compobjDP2", size = 7)
-            finalrep = self.combine([neg, DP2], "compnegobjDP", size = 7)
+            rel1 = self.combine([mod1, arg1],"comp2", size = 4, input_sizes=[4,4])
+            rel2= self.combine([mod2, arg2],"comp2", size = 4, input_sizes=[4,4])
+            DP1= self.combine([det, rel1],"compobjDP1", size = 64, input_sizes=[16,4])
+            DP2= self.combine([DP1, rel2],"compobjDP2", size = 7, input_sizes=[64,4])
+            finalrep = self.combine([neg, DP2], "compnegobjDP", size = 7, input_sizes=[4,7])
             self.logits6 = finalrep
 
         if self.model_type == "LSTMsimpcomp":
