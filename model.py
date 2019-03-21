@@ -1014,19 +1014,20 @@ class PIModel(object):
 
 
     def add_loss_op(self):
-        beta = self.l2_placeholder
-        reg = 0
-        for v in tf.trainable_variables():
-            reg = reg + tf.nn.l2_loss(v)
-        self.loss1256 = 0
-        for i in range(6):
-            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[0]*(1/6)
-        for i in range(6,9):
-            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[1]*(1/3)
-        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,9], logits=self.logits1256[9]))*self.weights1256[2]
-        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,10], logits=self.logits1256[10]))*self.weights1256[3]
-        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,11], logits=self.logits1256[11]))*self.weights1256[4]
-        self.loss1256 += beta*reg
+        if self.length == 1256:
+            beta = self.l2_placeholder
+            reg = 0
+            for v in tf.trainable_variables():
+                reg = reg + tf.nn.l2_loss(v)
+            self.loss1256 = 0
+            for i in range(6):
+                self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[0]*(1/6)
+            for i in range(6,9):
+                self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[1]*(1/3)
+            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,9], logits=self.logits1256[9]))*self.weights1256[2]
+            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,10], logits=self.logits1256[10]))*self.weights1256[3]
+            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,11], logits=self.logits1256[11]))*self.weights1256[4]
+            self.loss1256 += beta*reg
         beta = self.l2_placeholder
         reg = 0
         for v in tf.trainable_variables():
@@ -1054,10 +1055,11 @@ class PIModel(object):
         self.loss9 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits9) + beta*reg)
 
     def add_train_op(self):
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
-        tvars = tf.trainable_variables()
-        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1256, tvars), self.config.max_grad_norm)
-        self.train_op1256 = optimizer.apply_gradients(zip(grads, tvars))
+        if self.length == 1256:
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+            tvars = tf.trainable_variables()
+            grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1256, tvars), self.config.max_grad_norm)
+            self.train_op1256 = optimizer.apply_gradients(zip(grads, tvars))
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1, tvars), self.config.max_grad_norm)

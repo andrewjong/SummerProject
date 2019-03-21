@@ -56,6 +56,8 @@ def hyperparameter_search(models,  data_path,data_name,  learning_rates, l2_norm
                             for state_size in state_sizes:
                                 for batch_size in batch_sizes:
                                     for weights1256 in weights1256s:
+                                        if weights1256 != [1,1,1,1,1] and not crazy:
+                                            continue
                                         results_folder = str(learning_rate) + "$" + str(l2_norm) +"$" + str(activation_function) +"$" + str(dropout) +"$" + str(vocab_dim) +"$" + str(state_size) +"$" + str(batch_size) + "$" + json.dumps(weights1256)
                                         if not os.path.exists(os.path.join(model+attention + data_name,results_folder)):
                                             os.mkdir(os.path.join(model+attention+ data_name,results_folder))
