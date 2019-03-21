@@ -54,6 +54,46 @@ def get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_le
                np.array(labels[i * batch_size: (i+1) * batch_size]),
                9)
 
+def crazy2_get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_length, num_iter = None, shuffle = False):
+    data,_,_ = gd.process_data(1.0)
+    premises = []
+    premise_lengths = []
+    hypotheses = []
+    hypothesis_lengths = []
+    labels = []
+    with open(path+"1256",'r') as f:
+        lines = f.readlines()
+        if shuffle:
+            random.shuffle(lines)
+        for line in lines:
+            example = json.loads(line)
+            if " and " in example["sentence1"] or " or " in example["sentence1"] or " then " in example["sentence1"]:
+                prem = du.parse_sentence(data,example["sentence1"])[0].emptystring + " " + du.parse_sentence(data,example["sentence1"])[1]+ " " + du.parse_sentence(data,example["sentence1"])[2].emptystring
+                hyp = du.parse_sentence(data,example["sentence2"])[0].emptystring + " " + du.parse_sentence(data,example["sentence2"])[1]+ " " + du.parse_sentence(data,example["sentence2"])[2].emptystring
+                premises.append(sentence_to_id(prem, word_to_id, max_premise_length))
+                premise_lengths.append(len(prem.split()))
+                hypotheses.append(sentence_to_id(hyp, word_to_id, max_hypothesis_length))
+                hypothesis_lengths.append(len(hyp.split()))
+            else:
+                sentence1 = example["sentence1"]
+                sentence2 = example["sentence2"]
+                premises.append(sentence_to_id(sentence1, word_to_id, max_premise_length))
+                premise_lengths.append(len(sentence1.split()))
+                hypotheses.append(sentence_to_id(sentence2, word_to_id, max_hypothesis_length))
+                hypothesis_lengths.append(len(sentence2.split()))
+            labels.append([label_to_num(example["gold_label"][i]) for i in range(12)])
+            if num_iter is not None and len(labels) > num_iter*batch_size:
+                break
+    if num_iter is None:
+        num_iter = int(math.ceil(len(labels)/ batch_size))
+    for i in range(num_iter):
+        yield (np.array(premises[i * batch_size: (i+1) * batch_size]),
+               np.array(premise_lengths[i * batch_size: (i+1) * batch_size]),
+               np.array(hypotheses[i * batch_size: (i+1) * batch_size]),
+               np.array(hypothesis_lengths[i * batch_size: (i+1) * batch_size]),
+               np.array(labels[i * batch_size: (i+1) * batch_size]),
+               1256)
+
 def crazy_get_feed(path, batch_size, word_to_id, max_premise_length, max_hypothesis_length, num_iter = None, shuffle = False):
     data,_,_ = gd.process_data(1.0)
     premises = [[], [], [], [], []]

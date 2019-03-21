@@ -4,6 +4,7 @@ import tensorflow as tf
 
 class PIModel(object):
     def __init__(self, config, pretrained_embeddings, model_type):
+        self.weights1256=config.weights1256
         self.length = None
         self.model_type = model_type
         if self.model_type[0:4] == "rntn":
@@ -28,11 +29,12 @@ class PIModel(object):
         self.hyp_placeholder = tf.placeholder(tf.int32, shape=(None, self.config.max_hyp_len))
         self.hyp_len_placeholder = tf.placeholder(tf.int32, shape=(None,))
         self.label_placeholder = tf.placeholder(tf.int32, shape=(None,))
+        self.label_placeholder1256 = tf.placeholder(tf.int32, shape=(None,12))
         self.dropout_placeholder = tf.placeholder(tf.float32, shape=())
         self.l2_placeholder = tf.placeholder(tf.float32, shape = ())
         self.learning_rate_placeholder = tf.placeholder(tf.float32, shape=())
 
-    def create_feed_dict(self, prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2 = None, learning_rate = None, label_batch=None):
+    def create_feed_dict(self, prem_batch, prem_len, hyp_batch, hyp_len, dropout, l2 = None, learning_rate = None, label_batch=None, label_batch1256=None):
         feed_dict = {
             self.prem_placeholder: prem_batch,
             self.prem_len_placeholder: prem_len,
@@ -44,6 +46,8 @@ class PIModel(object):
             feed_dict[self.l2_placeholder] = l2
         if label_batch is not None:
             feed_dict[self.label_placeholder] = label_batch
+        if label_batch1256 is not None:
+            feed_dict[self.label_placeholder1256] = label_batch1256
         if learning_rate is not None:
             feed_dict[self.learning_rate_placeholder] = learning_rate
         else:
@@ -325,6 +329,7 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True)
 
+
             final= self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"comp")
             finalrep = self.combine([final],"final")
             finalrep = self.combine([finalrep],"final2")
@@ -376,6 +381,45 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True,
                                           name="six")
+            self.logits1256 = []
+            reuse = False
+            for i in [1,2,4,5,7,8]:
+                final = self.combine([tf.reshape(self.embed_prems[:,i,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,i,:], [-1,self.config.vocab_dim])],"comp")
+                finalrep = self.combine([final],"final")
+                finalrep = self.combine([finalrep],"final2")
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="one2"))
+                reuse = True
+
+            reuse = False
+            for i in [1,4,7]:
+                mod = self.combine([tf.reshape(self.embed_prems[:,i,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,i,:], [-1,self.config.vocab_dim])],"comp")
+                arg = self.combine([tf.reshape(self.embed_prems[:,i+1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,i+1,:], [-1,self.config.vocab_dim])],"comp")
+                final= self.combine([mod, arg],"comp")
+                finalrep = self.combine([final],"final")
+                finalrep = self.combine([finalrep],"final2")
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="two2"))
+                reuse = True
+            finalrep = self.combine([objectDP2],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five2"))
+            finalrep = self.combine([negobjectDP],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six2"))
+            self.logits1256.append(self.logits9)
 
         if self.model_type == "reallysimpcomp" or self.model_type == "rntnreallysimpcomp":
             subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"compd", reuse=False)
@@ -974,6 +1018,19 @@ class PIModel(object):
         reg = 0
         for v in tf.trainable_variables():
             reg = reg + tf.nn.l2_loss(v)
+        self.loss1256 = 0
+        for i in range(6):
+            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[0]*(1/6)
+        for i in range(6,9):
+            self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,i], logits=self.logits1256[i]))*self.weights1256[1]*(1/3)
+        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,9], logits=self.logits1256[9]))*self.weights1256[2]
+        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,10], logits=self.logits1256[10]))*self.weights1256[3]
+        self.loss1256 += tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder1256[:,11], logits=self.logits1256[11]))*self.weights1256[4]
+        self.loss1256 += beta*reg
+        beta = self.l2_placeholder
+        reg = 0
+        for v in tf.trainable_variables():
+            reg = reg + tf.nn.l2_loss(v)
         self.loss1 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits1) + beta*reg)
         beta = self.l2_placeholder
         reg = 0
@@ -999,6 +1056,10 @@ class PIModel(object):
     def add_train_op(self):
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
         tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1256, tvars), self.config.max_grad_norm)
+        self.train_op1256 = optimizer.apply_gradients(zip(grads, tvars))
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
+        tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1, tvars), self.config.max_grad_norm)
         self.train_op1 = optimizer.apply_gradients(zip(grads, tvars))
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
@@ -1019,8 +1080,15 @@ class PIModel(object):
         self.train_op9 = optimizer.apply_gradients(zip(grads, tvars))
 
     def optimize(self, sess, prem_batch, prem_len, hyp_batch, hyp_len, label_batch, length):
-        input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, self.config.dropout, self.config.l2_norm, self.config.learning_rate, label_batch)
+        if length != 1256:
+            input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, self.config.dropout, self.config.l2_norm, self.config.learning_rate, label_batch)
+        else:
+            input_feed = self.create_feed_dict(prem_batch, prem_len, hyp_batch, hyp_len, self.config.dropout, self.config.l2_norm, self.config.learning_rate, None, label_batch)
         self.length = length
+        if length == 1256:
+            output_feed = [self.train_op1256, self.logits1256, self.loss1256]
+            _, logits, loss = sess.run(output_feed, input_feed)
+            return None, loss
         if length == 1:
             output_feed = [self.train_op1, self.logits1, self.loss1]
             _, logits, loss = sess.run(output_feed, input_feed)
