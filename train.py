@@ -99,7 +99,7 @@ def train_model(model, attention, data_path,results_path, learning_rate, l2_norm
             for prem, prem_len, hyp, hyp_len, label, length in train_data:
                 _, _= m.optimize(sess, prem, prem_len, hyp, hyp_len, label, length)
                 count += 1
-                if count*config.batch_size % 10< config.batch_size:
+                if count*config.batch_size % 100000< config.batch_size:
                     val_data = model_util.get_feed(os.path.join(data_path +".val"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len)
                     preds_val, labels_val, _= m.run_test_epoch(sess, val_data)
                     test_data = model_util.get_feed(os.path.join(data_path +".test"), config.batch_size, word_to_id, config.max_prem_len, config.max_hyp_len)

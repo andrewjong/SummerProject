@@ -60,13 +60,14 @@ class PIModel(object):
 
     def add_seq2seq_prediction_op(self):
         initer = tf.contrib.layers.xavier_initializer()
+        xavier = tf.contrib.layers.xavier_initializer()
 
-        with tf.variable_scope("prem"):
-            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, activation=self.config.activation), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+        with tf.variable_scope("prem-siamese"):
+            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese"), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems,\
                           sequence_length=self.prem_len_placeholder, dtype=tf.float32)
-        with tf.variable_scope("hyp"):
-            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, activation=self.config.activation), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+        with tf.variable_scope("hyp-siamese"):
+            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese"), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
             new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                          sequence_length=self.hyp_len_placeholder, initial_state=prem_out)
         hyp_out = hyp_out.h
@@ -83,30 +84,30 @@ class PIModel(object):
             Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
             h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
         if self.config.attention == "wordbyword":
-            Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
-            Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            Wr = tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            w =  tf.Variable(initer([1,1,self.config.state_size]))
+            Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]),name="Wy")
+            Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]),name="Wh")
+            Wr = tf.Variable(initer([self.config.state_size, self.config.state_size]),name="Wr")
+            w =  tf.Variable(initer([1,1,self.config.state_size]),name="w")
             M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
             alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
             r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
-            Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            for i in range(1,self.length):
+            Wt = tf.Variable(initer([self.config.state_size, self.config.state_size]),name="Wt")
+            for i in range(1,9):
                 M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,i,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
                 alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
                 r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
-            Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
-            Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]),name="Wp")
+            Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]),name="Wx")
             h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
-        Ws1 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
-        bs1 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
+        Ws1 = tf.Variable(initer([self.config.state_size,self.config.state_size]),name="Ws1")
+        bs1 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3,name="bs1")
         h = self.config.activation(tf.matmul(h, Ws1) + bs1)
-        Ws3 = tf.Variable(initer([self.config.state_size,self.config.state_size]))
-        bs3 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3)
+        Ws3 = tf.Variable(initer([self.config.state_size,self.config.state_size]),name="Ws3")
+        bs3 = tf.Variable(tf.zeros([1,self.config.state_size]) + 1e-3,name="bs3")
         h = self.config.activation(tf.matmul(h, Ws3) + bs3)
 
-        Ws2 = tf.Variable(initer([self.config.state_size,3]))
-        bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3)
+        Ws2 = tf.Variable(initer([self.config.state_size,3]),name="Ws2")
+        bs2 = tf.Variable(tf.zeros([1,3]) + 1e-3,name="bs2")
         self.logits9 = tf.matmul(h, Ws2) + bs2
 
         Ws2 = tf.Variable(initer([self.config.state_size,4]), name="one")
@@ -124,6 +125,161 @@ class PIModel(object):
         Ws2 = tf.Variable(initer([self.config.state_size,7]), name="six")
         bs2 = tf.Variable(tf.zeros([1,7]) + 1e-3, name="six")
         self.logits6 = tf.matmul(h, Ws2) + bs2
+        self.logits1256 = []
+        reuse = False
+        for i in [1,2,4,5,7,8]:
+            with tf.variable_scope("prem-siamese"):
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,i:i+1,:],\
+                              sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+            with tf.variable_scope("hyp-siamese"):
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,i:i+1,:],\
+                             sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+            hyp_out = hyp_out.h
+            prem_out = prem_out.h
+            h = hyp_out
+            if self.config.attention == "simple":
+                Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+                Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                w =  tf.Variable(initer([1,1,self.config.state_size]))
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(hyp_out, Wh), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+                Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+            if self.config.attention == "wordbyword":
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+                for j in range(1):
+                    M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,j,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                    alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                    r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
+                h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+            h = self.config.activation(tf.matmul(h, Ws1) + bs1)
+            finalrep = self.config.activation(tf.matmul(h, Ws3) + bs3)
+            self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          reuse=reuse,
+                                          name="one2"))
+            reuse = True
+
+        reuse = False
+        for i in [1,4,7]:
+            with tf.variable_scope("prem-siamese"):
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,i:i+2,:],\
+                              sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+            with tf.variable_scope("hyp-siamese"):
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,i:i+2,:],\
+                             sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+            hyp_out = hyp_out.h
+            prem_out = prem_out.h
+            h = hyp_out
+            if self.config.attention == "simple":
+                Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+                Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                w =  tf.Variable(initer([1,1,self.config.state_size]))
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(hyp_out, Wh), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+                Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+                h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+            if self.config.attention == "wordbyword":
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+                for j in range(2):
+                    M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,j,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                    alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                    r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
+                h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+            h = self.config.activation(tf.matmul(h, Ws1) + bs1)
+            finalrep = self.config.activation(tf.matmul(h, Ws3) + bs3)
+            self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          reuse=reuse,
+                                          name="two2"))
+            reuse = True
+        with tf.variable_scope("prem-siamese"):
+            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,4:,:],\
+                          sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+        with tf.variable_scope("hyp-siamese"):
+            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,4:,:],\
+                         sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+        hyp_out = hyp_out.h
+        prem_out = prem_out.h
+        h = hyp_out
+        if self.config.attention == "simple":
+            Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+            Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            w =  tf.Variable(initer([1,1,self.config.state_size]))
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(hyp_out, Wh), 1))
+            alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+            r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+        if self.config.attention == "wordbyword":
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
+            alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+            r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            for j in range(5):
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,j,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
+            h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+        h = self.config.activation(tf.matmul(h, Ws1) + bs1)
+        finalrep = self.config.activation(tf.matmul(h, Ws3) + bs3)
+        self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                      kernel_initializer=xavier,
+                                      use_bias=True,
+                                      name="five2"))
+        with tf.variable_scope("prem-siamese"):
+            prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            new_prems, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,3:,:],\
+                          sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+        with tf.variable_scope("hyp-siamese"):
+            hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+            new_hyps, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,3:,:],\
+                         sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+        hyp_out = hyp_out.h
+        prem_out = prem_out.h
+        h = hyp_out
+        if self.config.attention == "simple":
+            Wy = tf.Variable(initer([1,1,self.config.state_size, self.config.state_size]))
+            Wh = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            w =  tf.Variable(initer([1,1,self.config.state_size]))
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(hyp_out, Wh), 1))
+            alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+            r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            Wp = tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            Wx= tf.Variable(initer([self.config.state_size, self.config.state_size]))
+            h = tf.tanh(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+        if self.config.attention == "wordbyword":
+            M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,0,:], Wh), 1))
+            alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+            r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1)
+            for j in range(6):
+                M = tf.tanh(tf.reduce_sum(tf.multiply(Wy, tf.expand_dims(new_prems,3)), 3) + tf.expand_dims(tf.matmul(new_hyps[:,j,:], Wh), 1) + tf.expand_dims(tf.matmul(r, Wr), 1))
+                alpha = tf.nn.softmax(tf.reduce_sum(tf.multiply(w, M), 2), dim = 1)
+                r = tf.reduce_sum(tf.multiply(tf.expand_dims(alpha, 2), new_prems), 1) + tf.tanh(tf.matmul(r, Wt))
+            h = self.config.activation(tf.matmul(r, Wp) + tf.matmul(hyp_out, Wx))
+        h = self.config.activation(tf.matmul(h, Ws1) + bs1)
+        finalrep = self.config.activation(tf.matmul(h, Ws3) + bs3)
+        self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                      kernel_initializer=xavier,
+                                      use_bias=True,
+                                      name="six2"))
+        self.logits1256.append(self.logits9)
 
     def LSTMcombine(self,children = None,input=None, size=None):
         if size is None:
@@ -199,11 +355,11 @@ class PIModel(object):
         # ingest hypothesis and premise with two different RNNs, then concatenate the outputs of each
         if self.model_type == 'siamese':
             with tf.variable_scope("prem-siamese"):
-                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese"), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
                 _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems,\
                               sequence_length=self.prem_len_placeholder, dtype=tf.float32)
             with tf.variable_scope("hyp-siamese"):
-                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese"), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
                 _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps,\
                              sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
 
@@ -213,6 +369,7 @@ class PIModel(object):
                                             activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
+                                            name="final"
                                             )
             representation2 = tf.layers.dense(
                                             representation,
@@ -220,6 +377,7 @@ class PIModel(object):
                                             activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
+                                            name = "final2"
                                             )
 
             self.logits9 = tf.layers.dense(representation2, 3,
@@ -241,28 +399,159 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True,
                                           name="six")
+            self.logits1256 = []
+            reuse = False
+            for i in [1,2,4,5,7,8]:
+                with tf.variable_scope("prem-siamese"):
+                    prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                    _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,i:i+1,:],\
+                                  sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+                with tf.variable_scope("hyp-siamese"):
+                    hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                    _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,i:i+1,:],\
+                                 sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+                representation = tf.layers.dense(
+                                                tf.concat([prem_out.h, hyp_out.h], 1),
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final",
+                                                reuse=True
+                                                )
+                finalrep = tf.layers.dense(
+                                                representation,
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name = "final2",
+                                                reuse=True
+                                                )
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="one2"))
+                reuse = True
+
+            reuse = False
+            for i in [1,4,7]:
+                with tf.variable_scope("prem-siamese"):
+                    prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                    _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,i:i+2,:],\
+                                  sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+                with tf.variable_scope("hyp-siamese"):
+                    hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                    _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,i:i+2,:],\
+                                 sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+                representation = tf.layers.dense(
+                                                tf.concat([prem_out.h, hyp_out.h], 1),
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final",
+                                                reuse=True
+                                                )
+                finalrep = tf.layers.dense(
+                                                representation,
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name = "final2",
+                                                reuse=True
+                                                )
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="two2"))
+                reuse = True
+            with tf.variable_scope("prem-siamese"):
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,4:,:],\
+                              sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+            with tf.variable_scope("hyp-siamese"):
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,4:,:],\
+                             sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+            representation = tf.layers.dense(
+                                            tf.concat([prem_out.h, hyp_out.h], 1),
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final",
+                                            reuse=True
+                                            )
+            finalrep = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name = "final2",
+                                            reuse=True
+                                            )
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five2"))
+            with tf.variable_scope("prem-siamese"):
+                prem_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="premsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                _, prem_out = tf.nn.dynamic_rnn(prem_cell, self.embed_prems[:,3:,:],\
+                              sequence_length=self.prem_len_placeholder, dtype=tf.float32)
+            with tf.variable_scope("hyp-siamese"):
+                hyp_cell = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.LSTMCell(self.config.state_size, name="hypsiamese",reuse=True), output_keep_prob = self.dropout_placeholder,state_keep_prob = self.dropout_placeholder)
+                _, hyp_out = tf.nn.dynamic_rnn(hyp_cell, self.embed_hyps[:,3:,:],\
+                             sequence_length=self.hyp_len_placeholder, dtype=tf.float32)
+            representation = tf.layers.dense(
+                                            tf.concat([prem_out.h, hyp_out.h], 1),
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final",
+                                            reuse=True
+                                            )
+            finalrep = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name = "final2",
+                                            reuse=True
+                                            )
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six2"))
+            self.logits1256.append(self.logits9)
 
         # bag of words: average premise, average hypothesis, then concatenate
         if self.model_type == 'bow':
-            prem_mean = tf.reduce_mean(self.embed_prems, axis=-1)
-            hyp_mean = tf.reduce_mean(self.embed_hyps, axis=-1)
+            prem_mean = tf.reduce_mean(self.embed_prems, axis=-2)
+            hyp_mean = tf.reduce_mean(self.embed_hyps, axis=-2)
 
-            prem_projection = tf.layers.dense(prem_mean, self.config.state_size/2)
-            hyp_projection = tf.layers.dense(hyp_mean, self.config.state_size/2)
 
             representation = tf.layers.dense(
                                             tf.concat([prem_mean, hyp_mean], 1),
                                             self.config.state_size,
-                                            activation=tf.nn.relu,
+                                            activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
+                                            name="final"
                                             )
             representation = tf.layers.dense(
                                             representation,
                                             self.config.state_size,
-                                            activation=tf.nn.relu,
+                                            activation=self.config.activation,
                                             kernel_initializer=xavier,
                                             use_bias=True,
+                                            name="final2"
                                             )
             self.logits9 = tf.layers.dense(representation, 3,
                                           kernel_initializer=xavier,
@@ -283,6 +572,117 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True,
                                           name="six")
+            self.logits1256 = []
+            reuse = False
+            for i in [1,2,4,5,7,8]:
+                prem_mean = tf.reduce_mean(self.embed_prems[:,i:i+1,:], axis=-2)
+                hyp_mean = tf.reduce_mean(self.embed_hyps[:,i:i+1,:], axis=-2)
+
+                representation = tf.layers.dense(
+                                                tf.concat([prem_mean, hyp_mean], 1),
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final",
+                                                reuse=True
+                                                )
+                finalrep = tf.layers.dense(
+                                                representation,
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final2",
+                                                reuse=True
+                                                )
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="one2"))
+                reuse = True
+
+            reuse = False
+            for i in [1,4,7]:
+                prem_mean = tf.reduce_mean(self.embed_prems[:,i:i+2,:], axis=-2)
+                hyp_mean = tf.reduce_mean(self.embed_hyps[:,i:i+2,:], axis=-2)
+
+                representation = tf.layers.dense(
+                                                tf.concat([prem_mean, hyp_mean], 1),
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final",
+                                                reuse=True
+                                                )
+                finalrep = tf.layers.dense(
+                                                representation,
+                                                self.config.state_size,
+                                                activation=self.config.activation,
+                                                kernel_initializer=xavier,
+                                                use_bias=True,
+                                                name="final2",
+                                                reuse=True
+                                                )
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="two2"))
+                reuse = True
+            prem_mean = tf.reduce_mean(self.embed_prems[:,4:,:], axis=-2)
+            hyp_mean = tf.reduce_mean(self.embed_hyps[:,4:,:], axis=-2)
+
+            representation = tf.layers.dense(
+                                            tf.concat([prem_mean, hyp_mean], 1),
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final",
+                                            reuse=True
+                                            )
+            finalrep = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final2",
+                                            reuse=True
+                                            )
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five2"))
+            prem_mean = tf.reduce_mean(self.embed_prems[:,3:,:], axis=-2)
+            hyp_mean = tf.reduce_mean(self.embed_hyps[:,3:,:], axis=-2)
+
+            representation = tf.layers.dense(
+                                            tf.concat([prem_mean, hyp_mean], 1),
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final",
+                                            reuse=True
+                                            )
+            finalrep = tf.layers.dense(
+                                            representation,
+                                            self.config.state_size,
+                                            activation=self.config.activation,
+                                            kernel_initializer=xavier,
+                                            use_bias=True,
+                                            name="final2",
+                                            reuse=True
+                                            )
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six2"))
+            self.logits1256.append(self.logits9)
         if self.model_type == "restcomp":
             subjectd = self.combine([tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,0,:], [-1,self.config.vocab_dim])],"ycomp", reuse=False, size=16)
             subjectn = self.combine([tf.reshape(self.embed_prems[:,1,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,1,:], [-1,self.config.vocab_dim])],"zcomp",reuse=False, size=2)
@@ -928,6 +1328,43 @@ class PIModel(object):
                                           kernel_initializer=xavier,
                                           use_bias=True,
                                           name="six")
+            self.logits1256 = []
+            reuse = False
+            for i in [1,2,4,5,7,8]:
+                final= self.combine([tf.reshape(self.embed_prems[:,i,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,i,:], [-1,self.config.vocab_dim])],"final")
+                finalrep = self.combine([final], "final2")
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="one2"))
+                reuse = True
+
+            reuse = False
+            for i in [1,4,7]:
+                premrep= self.combine([tf.reshape(self.embed_prems[:,i,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_prems[:,i+1,:], [-1,self.config.vocab_dim])],"comp")
+                hyprep= self.combine([tf.reshape(self.embed_hyps[:,i,:], [-1,self.config.vocab_dim]), tf.reshape(self.embed_hyps[:,i+1,:], [-1,self.config.vocab_dim])],"comp")
+                final= self.combine([premrep, hyprep],"final")
+                finalrep = self.combine([final], "final2")
+                self.logits1256.append(tf.layers.dense(finalrep, 4,
+                                              kernel_initializer=xavier,
+                                              use_bias=True,
+                                              reuse=reuse,
+                                              name="two2"))
+                reuse = True
+            finalrep = self.combine([pobjectDP2,hobjectDP2],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="five2"))
+            finalrep = self.combine([pnegobjectDP,hnegobjectDP],"final")
+            finalrep = self.combine([finalrep],"final2")
+            self.logits1256.append(tf.layers.dense(finalrep, 7,
+                                          kernel_initializer=xavier,
+                                          use_bias=True,
+                                          name="six2"))
+            self.logits1256.append(self.logits9)
 
         if self.model_type == "sepboolcomp":
             psubjectd = tf.reshape(self.embed_prems[:,0,:], [-1,self.config.vocab_dim])
@@ -1014,7 +1451,7 @@ class PIModel(object):
 
 
     def add_loss_op(self):
-        if self.length == 1256:
+        if True:
             beta = self.l2_placeholder
             reg = 0
             for v in tf.trainable_variables():
@@ -1055,7 +1492,8 @@ class PIModel(object):
         self.loss9 = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=self.label_placeholder, logits=self.logits9) + beta*reg)
 
     def add_train_op(self):
-        if self.length == 1256:
+        #if self.length == 1256:
+        if True:
             optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_placeholder)
             tvars = tf.trainable_variables()
             grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss1256, tvars), self.config.max_grad_norm)
